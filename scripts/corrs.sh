@@ -13,4 +13,6 @@
 #SBATCH --array=0-16
 
 module load cuda cudnn
-python -u _code/lucent-things/correlations.py --array $SLURM_ARRAY_TASK_ID
+python -u correlations.py \
+    --array $SLURM_ARRAY_TASK_ID \
+    --output_file results/corrs_${SLURM_ARRAY_TASK_ID}.json
