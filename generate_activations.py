@@ -9,7 +9,6 @@ from torch.utils.data import DataLoader
 from utils.dataset import TVSD_Dataset
 from utils.hooks import Activations
 from utils.load_model import load_model, resolve_transform
-from utils.brainscore import compute_brain_score
 
 def main(args):
 
@@ -60,75 +59,6 @@ def main(args):
             torch.cuda.empty_cache()
         activations.clear()
         print("Activations saved successfully.")
-
-    max_chunks = args.max_chunks if args.max_chunks else chunk + 1
-
-    layer_scores = {}
-    for layer in hook_layers:
-        print(f"===== EVALUATING LAYER: {layer} =========")
-        layer_dir = f"{args.output_dir}/activations/TVSD/{model_name}/{layer}"
-        activations = []
-        for chunk_idx in range(max_chunks):
-            file_path = f"{layer_dir}/chunk_{chunk_idx}.pt"
-            try:
-                chunk_activations = torch.load(file_path, weights_only=True) # [C, B, ...]
-                chunk_activations = chunk_activations.reshape(-1, *chunk_activations.shape[2:])  # [C * B, ...]
-                activations.append(chunk_activations)
-            except FileNotFoundError:
-                print(f"File {file_path} not found. Stopping evaluation for this layer.")
-                break
-        activations = torch.cat(activations, dim=0) if activations else None
-        if activations is not None:
-            print(f"Layer: {layer}, Activations shape: {activations.shape}")
-        else:
-            print(f"No activations found for layer: {layer}")
-
-        activations = activations.reshape(activations.shape[0], -1).detach().cpu().numpy()  # [B, H * W * C]
-        neural_responses, reliability = tvsd_dataset[:activations.shape[0]]
-        reliability_mask = reliability > args.reliability_threshold
-        neural_responses = neural_responses[:, reliability_mask] # [B, C']
-
-        if args.noise_test:
-            activations = np.random.normal(size=activations.shape)  # Use random noise for null results
-
-        print(f"{neural_responses.shape[1]} neural responses retained with reliability > {args.reliability_threshold}")
-
-        layer_score, layer_std = compute_brain_score(X=activations, Y=neural_responses, n_splits=args.n_splits, reducer=args.reducer, correlation_fn=args.correlation_fn, pca_components=args.pca_components)
-        layer_scores[layer] = {
-            'score': layer_score,
-            'std': layer_std
-        }
-        print(f"Score: {layer_score}, Std: {layer_std}")
-
-    print("Final Layer Scores:")
-    for layer, scores in layer_scores.items():
-        print(f"{layer}: Score = {scores['score']}, Std = {scores['std']}")
-    results_file = f"{args.output_dir}/results/{model_name}/arr_{args.array}.csv"
-    os.makedirs(os.path.dirname(results_file), exist_ok=True)
-    with open(results_file, 'w') as f:
-        f.write("Layer,Score,Std\n")
-        for layer, scores in layer_scores.items():
-            f.write(f"{layer},{scores['score']},{scores['std']}\n")
-    metadata_file = f"{args.output_dir}/results/{model_name}/arr_{args.array}_metadata.json"
-    os.makedirs(os.path.dirname(metadata_file), exist_ok=True)
-    metadata = {
-        "model": model_name,
-        "region": tvsd_dataset.region,
-        "array": args.array,
-        "monkey": args.monkey,
-        "hook_interval": args.hook_interval,
-        "batch_size": args.batch_size,
-        "save_every": args.save_every,
-        "max_chunks": max_chunks,
-        "n_imgs": activations.shape[0] if activations is not None else 0,
-        "reliability_threshold": args.reliability_threshold,
-        "reducer": args.reducer,
-        "correlation_function": args.correlation_fn
-    }
-    
-    with open(metadata_file, 'w') as f:
-        json.dump(metadata, f, indent=4)
-    print(f"Results saved to {results_file}, metadata saved to {metadata_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="TVSD alignment pipeline.")

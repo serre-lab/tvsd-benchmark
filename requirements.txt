@@ -1,0 +1,9 @@
+numpy
+scipy
+torch
+torchvision
+osfclient
+scikit-learn
+matplotlib
+tqdm
+h5py

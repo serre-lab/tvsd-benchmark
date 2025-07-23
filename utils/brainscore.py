@@ -2,7 +2,8 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy
+from time import time
+from tqdm import tqdm
 from scipy.stats import pearsonr, spearmanr
 from sklearn.model_selection import KFold
 from sklearn.metrics import r2_score
@@ -63,10 +64,12 @@ def brain_score_spearman(Y_pred, Y_test):
     # print('brain_score_spearman: ', spearman_correlations)
     return spearman_correlations
 
-def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pearson'):
+def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pearson', pca_components=100):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     scores = []
+    times = []
     for train_index, test_index in kf.split(X):
+        start_time = time()
         X_train, X_test = X[train_index], X[test_index]
         Y_train, Y_test = Y[train_index], Y[test_index]
         
@@ -77,7 +80,7 @@ def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pear
         Y_test = scaler_Y.transform(Y_test)
 
         print("Performing PCA...")
-        pca_X = PCA(n_components=min(X_train.shape[-1], 100))
+        pca_X = PCA(n_components=min(X_train.shape[-1], pca_components))
         X_train = pca_X.fit_transform(X_train)
         X_test = pca_X.transform(X_test)
 
@@ -102,7 +105,13 @@ def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pear
             raise ValueError('Unknown reducer')
         
         scores.append(score)
+        end_time = time()
+        times.append(end_time - start_time)
 
     layer_score = np.nanmean(scores)
     layer_std = np.nanstd(scores)
+
+    mean_time = np.mean(times)
+    print(f"Layer score: {layer_score:.4f}, Layer std: {layer_std:.4f}, Mean time per fold: {mean_time:.4f} seconds")
+
     return layer_score, layer_std
