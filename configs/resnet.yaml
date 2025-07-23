@@ -1,0 +1,10 @@
+model-name: resnet50
+model-type: resnet
+model-source: torchvision
+transform:
+  - name: Resize
+    size: [224, 224]
+  - name: ToTensor
+  - name: Normalize
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]

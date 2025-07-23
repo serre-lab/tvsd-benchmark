@@ -1,3 +1,7 @@
-data/
+legacy/
 logs/
+data/
 models/
+outputs/
+*/__pycache__/
+_code/
