@@ -64,7 +64,7 @@ def brain_score_spearman(Y_pred, Y_test):
     # print('brain_score_spearman: ', spearman_correlations)
     return spearman_correlations
 
-def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pearson', pca_components=100):
+def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pearson', pca_components=100, preprocessed=True):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     scores = []
     times = []
@@ -73,16 +73,20 @@ def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pear
         X_train, X_test = X[train_index], X[test_index]
         Y_train, Y_test = Y[train_index], Y[test_index]
         
-        scaler_X, scaler_Y = StandardScaler(), StandardScaler()
-        X_train = scaler_X.fit_transform(X_train)
-        Y_train = scaler_Y.fit_transform(Y_train)
-        X_test = scaler_X.transform(X_test)
-        Y_test = scaler_Y.transform(Y_test)
+        if not preprocessed:
+            scaler_X, scaler_Y = StandardScaler(), StandardScaler()
+            X_train = scaler_X.fit_transform(X_train)
+            Y_train = scaler_Y.fit_transform(Y_train)
+            X_test = scaler_X.transform(X_test)
+            Y_test = scaler_Y.transform(Y_test)
 
-        print("Performing PCA...")
-        pca_X = PCA(n_components=min(X_train.shape[-1], pca_components))
-        X_train = pca_X.fit_transform(X_train)
-        X_test = pca_X.transform(X_test)
+            if pca_components is not None and X_train.shape[-1] > pca_components:
+                print("Performing PCA...")
+                pca_X = PCA(n_components=min(X_train.shape[-1], pca_components))
+                X_train = pca_X.fit_transform(X_train)
+                X_test = pca_X.transform(X_test)
+            else:
+                print("Skipping PCA, using original dimensions.")
 
         n_components = min(X_train.shape[-1], Y_train.shape[-1], 25)
         print("Performing PLS regression...")

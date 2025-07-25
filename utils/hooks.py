@@ -1,5 +1,6 @@
 import os
 import torch
+from sklearn.decomposition import PCA
 from typing import List
 
 class Activations:
@@ -16,17 +17,17 @@ class Activations:
         print("Setting current chunk to:", chunk)
         self._current_chunk = chunk
 
-    def _get_hook(self, layer_name, debug=True):
+    def _get_hook(self, layer_name, debug=False):
         if debug:
             print(f"[DEBUG] Registering hook for layer: {layer_name}")
         def hook_fn(module, input, output):
             if debug:
-                print(f"[DEBUG] Hook called for layer: {layer_name}")
+                print(f"[DEBUG] Hook called for layer: {layer_name}, type: {output.dtype}")
             if self._active:
                 if layer_name in self.activations:
-                    self.activations[layer_name].append(output.detach().cpu())
+                    self.activations[layer_name].append(output.to(torch.float16).detach().cpu())
                 else:
-                    self.activations[layer_name] = [output.detach().cpu()]
+                    self.activations[layer_name] = [output.to(torch.float16).detach().cpu()]
                 if debug:
                     print(f"[DEBUG] Layer: {layer_name}, Output shape: {output.shape}")
         return hook_fn
@@ -54,20 +55,28 @@ class Activations:
             self.hooks.append(hook)
         self._active = True
 
-    def save(self):
-        print("[DEBUG] Saving activations to files in directory:", self.output_dir)
+    def save(self, pca_components=None):
         for layer_name, activations in self.activations.items():
             if activations:
-                print(f"IND ACTIVATION SHAPE: {activations[0].shape}")
                 try:
-                    tensor = torch.stack(activations)
+                    tensor = torch.cat(activations, dim=0)
                 except Exception as e:
                     print(f"[ERROR] Layer {layer_name} could not be stacked.")
                     print(f"[ERROR]Shapes of activations: {[a.shape for a in activations]}")
                     raise e
                     
-                file_path = f"{self.output_dir}/{self.dataset_name}/{self.model_name}/{layer_name}/chunk_{self._current_chunk}.pt"
+                file_path = f"{self.output_dir}/activations/{self.dataset_name}/{self.model_name}/{layer_name}/activations.pt"
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+                if pca_components is not None and tensor.view(tensor.shape[0], -1).shape[1] > pca_components:
+                    print("[DEBUG] Performing PCA on activations for layer:", layer_name)
+                    tensor = tensor.reshape(tensor.shape[0], -1).detach().cpu().numpy()
+                    pca = PCA(n_components=pca_components)
+                    tensor = pca.fit_transform(tensor)
+                    tensor = torch.tensor(tensor, dtype=torch.float16)
+                    print("[DEBUG] PCA shape:", tensor.shape)
+
+                print("[DEBUG] Saving activations to:", file_path)
                 torch.save(tensor, file_path)
 
     def clear(self):
@@ -77,6 +86,6 @@ class Activations:
     def get(self):
         return self.activations
 
-    def flush(self):
-        self.save()
+    def flush(self, pca_components=None):
+        self.save(pca_components=pca_components)
         self.clear()

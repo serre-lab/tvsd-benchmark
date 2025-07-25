@@ -1,6 +1,7 @@
 numpy
 scipy
 torch
+torch-pca
 torchvision
 osfclient
 scikit-learn
