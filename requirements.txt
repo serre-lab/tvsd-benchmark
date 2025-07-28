@@ -8,3 +8,4 @@ scikit-learn
 matplotlib
 tqdm
 h5py
+pyyaml
