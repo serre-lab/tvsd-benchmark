@@ -16,7 +16,7 @@ def main(args):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Using device: {device}")
 
-    model, model_name = load_model(args.model_config)
+    model, model_name, _ = load_model(args.model_config)
     #layers = [name for name, module in model.named_modules() if 'relu' not in name]
 
     tvsd_dataset = TVSD_Dataset(

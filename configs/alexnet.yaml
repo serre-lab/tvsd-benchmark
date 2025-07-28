@@ -1,7 +1,7 @@
-model-name: resnet50
-model-type: resnet
+model-name: alexnet
+model-type: alexnet
 model-source: torchvision
-hook-interval: 8
+hook-interval: 3
 transform:
   - name: Resize
     size: [224, 224]

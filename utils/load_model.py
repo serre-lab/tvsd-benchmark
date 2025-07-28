@@ -15,14 +15,38 @@ def load_model(config_path: str):
     with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
     
+    if config['model-source'] == 'torchvision':
+        model, model_name = load_torchvision_model(config)
+    elif config['model-source'] == 'timm':
+        model, model_name = load_timm_model(config)
+    elif config['model-source'] == 'hmax':
+        model, model_name = load_hmax_model(config)
+    else:
+        raise NotImplementedError(f"Model {config['model-name']} is not supported.")
+    
+    hook_interval = config.get('hook-interval', 5)
+    
+    return model, model_name, hook_interval
+
+def load_torchvision_model(config: dict):
     if config['model-name'] == 'resnet50':
         from torchvision.models import resnet50
         model = resnet50(weights="IMAGENET1K_V1")
         model_name = 'resnet50'
+    elif config['model-name'] == 'alexnet':
+        from torchvision.models import alexnet
+        model = alexnet(weights="IMAGENET1K_V1")
+        model_name = 'alexnet'
     else:
-        raise NotImplementedError(f"Model {config['model-name']} is not supported.")
-    
+        raise NotImplementedError(f"Model {config['model-name']} is not supported in torchvision.")
+
     return model, model_name
+
+def load_timm_model(config: dict):
+    pass
+
+def load_hmax_model(config: dict):
+    pass
 
 def resolve_transform(model_config: str):
     """

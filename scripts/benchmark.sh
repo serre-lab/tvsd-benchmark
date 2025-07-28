@@ -3,8 +3,8 @@
 #SBATCH -N 1
 #SBATCH -n 2
 #SBATCH --mem=120g
-#SBATCH -o logs/inference_%A_%a.out
-#SBATCH -e logs/inference_%A_%a.err
+#SBATCH -o logs/benchmark_%A_%a.out
+#SBATCH -e logs/benchmark_%A_%a.err
 #SBATCH -t 24:00:00
 #SBATCH --array=0-15
 
