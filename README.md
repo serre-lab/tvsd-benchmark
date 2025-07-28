@@ -36,10 +36,10 @@ chmod +x scripts/download_things.sh
 
 Ensure that you have your virtual envirovnment activated, and run
 ```bash
-sbatch generate_activations.sh [MODEL_CONFIG_PATH]
+sbatch scripts/generate_activations.sh [MODEL_CONFIG_PATH]
 ```
 When this completes, run
 ```bash
-sbatch benchmark.sh [MODEL_CONFIG_PATH]
+sbatch scripts/benchmark.sh [MODEL_CONFIG_PATH]
 ```
 (We separate the two jobs, as only the former requires a GPU.) The results will populate `outputs/results/[model]`.
