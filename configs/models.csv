@@ -1,0 +1,5 @@
+model,config
+alexnet,configs/alexnet.yaml
+resnet50,configs/resnet50.yaml
+chresmax_v3,configs/chresmax_v3.yaml
+inception_v3,configs/inception_v3.yaml

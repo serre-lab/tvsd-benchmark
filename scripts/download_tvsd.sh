@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script downloads the necessary data files for the project.
+# This script downloads the TVSD dataset from GIN and stores it in the data directory.
 
 mkdir -p data
 cd data

@@ -43,3 +43,15 @@ When this completes, run
 sbatch scripts/benchmark.sh [MODEL_CONFIG_PATH]
 ```
 (We separate the two jobs, as only the former requires a GPU.) The results will populate `outputs/results/[model]`.
+
+## Benchmarking a Suite of Models
+
+Fill `configs/models.csv` with the names of the models you want to benchmark. Then run
+```bash
+sbatch all_models.sh
+```
+Which will generative and evaluate activations for each model.
+
+## Adding Your Own Model
+
+In the current configuration, each model is specified by a corresponding config file in `configs`. Making a new config for your model is self-explanatory--just follow the outline of the existing ones. You will also have to build out `utils/load_model.py` to accept your added model. In the future, direct integration with `timm` will be provided. 

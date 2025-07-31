@@ -85,6 +85,7 @@ if __name__ == "__main__":
     parser.add_argument('--correlation_fn', type=str, default='pearson', choices=['pearson', 'spearman'], help='Correlation function to use for brain score computation.')
     parser.add_argument('--n_splits', type=int, default=5, help='Number of splits for KFold cross-validation.')
     parser.add_argument('--pca_components', type=int, default=100, help='Number of PCA components to use.')
+    parser.add_argument('--skip_interval', type=int, default=1, help='Skip every n-th image in the dataset.')
     parser.add_argument('--preprocessed', action='store_true', help='Whether the data is preprocessed (scaled and PCA applied).')
     parser.add_argument('--noise_test', action='store_true', help='Run with pure noise to test. Useful for debugging.')
     parser.add_argument('--permutation_test', action='store_true', help='Randomly permute neural responses. Useful for debugging.')

@@ -13,5 +13,6 @@ export PYTHONPATH="$PYTHONPATH:$(pwd)"
 module load cuda cudnn
 python -u generate_activations.py   --model_config $1 \
                                     --monkey monkeyF \
-                                    --batch_size 256 \
-                                    --pca_components 100
+                                    --batch_size 128 \
+                                    --pca_components 100 \
+                                    --max_pca_train_batches 4

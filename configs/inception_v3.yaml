@@ -1,7 +1,7 @@
-model-name: alexnet
-model-type: alexnet
+model-name: inception_v3
+model-type: inception
 model-source: torchvision
-hook-interval: 2
+hook-interval: 4
 transform:
   - name: Resize
     size: [224, 224]

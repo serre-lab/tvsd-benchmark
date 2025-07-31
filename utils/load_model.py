@@ -1,5 +1,10 @@
+import sys
 import yaml 
+import torch
 from torchvision import transforms
+
+sys.path.append("/users/jamullik/pytorch-image-models/") # hacky for now, need to fix this later
+from timm.models.RESMAX import chresmax_v3
 
 def load_model(config_path: str):
     """
@@ -37,6 +42,10 @@ def load_torchvision_model(config: dict):
         from torchvision.models import alexnet
         model = alexnet(weights="IMAGENET1K_V1")
         model_name = 'alexnet'
+    elif config['model-name'] == 'inception_v3':
+        from torchvision.models import inception_v3
+        model = inception_v3(weights="IMAGENET1K_V1")
+        model_name = 'inception_v3'
     else:
         raise NotImplementedError(f"Model {config['model-name']} is not supported in torchvision.")
 
@@ -46,7 +55,30 @@ def load_timm_model(config: dict):
     pass
 
 def load_hmax_model(config: dict):
-    pass
+    if config['model-type'] == 'chresmax_v3':
+        checkpoint = torch.load(config['hmax-info']['ckpt_path'],
+                                map_location='cuda' if torch.cuda.is_available() else 'cpu',
+                                weights_only=False)
+        model = chresmax_v3(
+            num_classes=config['hmax-info']['num_classes'],
+            big_size=config['hmax-info']['big_size'],
+            small_size=config['hmax-info']['small_size'],
+            in_chans=3, 
+            ip_scale_bands=config['hmax-info']['ip'],
+            classifier_input_size=config['hmax-info']['classifier_input_size'],
+            contrastive_loss=True,
+            pyramid=False,
+            bypass=True,
+            main_route=False,
+            c_scoring='v2'      
+        ).to('cuda' if torch.cuda.is_available() else 'cpu').eval()
+        model.load_state_dict(checkpoint['state_dict'], strict=False)
+        model_name = 'chresmax_v3'
+    else:
+        raise NotImplementedError(f"Model {config['model-type']} is not supported in HMAX.")
+    
+    return model, model_name
+
 
 def resolve_transform(model_config: str):
     """

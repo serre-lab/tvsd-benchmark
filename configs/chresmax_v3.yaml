@@ -1,0 +1,18 @@
+model-name: chresmax_v3
+model-type: chresmax_v3
+model-source: hmax
+hook-interval: 12
+hmax-info:
+  ip: 3
+  big_size: 322
+  small_size: 322
+  classifier_input_size: 18432
+  num_classes: 1000
+  ckpt_path: /oscar/data/tserre/xyu110/pytorch-output/train/0/chresmax_v3_lambda/ip_3_chresmax_v3_gpu_8_cl_0.05_ip_3_322_322_18432_c1[_6,3,1_]_bypass/model_best.pth.tar
+transform:
+  - name: Resize
+    size: [322, 322]
+  - name: ToTensor
+  - name: Normalize
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
