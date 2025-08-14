@@ -3,5 +3,5 @@ logs/
 data/
 models/
 outputs/
+configs/timm/
 */__pycache__/
-_code/

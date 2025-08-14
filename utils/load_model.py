@@ -1,5 +1,6 @@
 import sys
 import yaml 
+import timm
 import torch
 from torchvision import transforms
 
@@ -52,7 +53,9 @@ def load_torchvision_model(config: dict):
     return model, model_name
 
 def load_timm_model(config: dict):
-    pass
+    model = timm.create_model(config['model-name'], pretrained=True)
+    model_name = config['model-name']
+    return model, model_name
 
 def load_hmax_model(config: dict):
     if config['model-type'] == 'chresmax_v3':
