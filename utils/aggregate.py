@@ -3,6 +3,7 @@ import pandas as pd
 
 from utils.utils import get_region
 
+
 def aggregate_results(results_dir: str, monkey: str = "monkeyF"):
     """
     Our methodology is as follows:
@@ -32,24 +33,31 @@ def aggregate_results(results_dir: str, monkey: str = "monkeyF"):
                     "std_score": layer_results["Score"].std(),
                 }
             if layer_scores:
-                best_layer_info = max(layer_scores.values(), key=lambda x: x["mean_score"])
+                best_layer_info = max(
+                    layer_scores.values(), key=lambda x: x["mean_score"]
+                )
                 model_best_layers[model] = {
                     "best_layer": best_layer_info["layer"],
                     "best_layer_score": best_layer_info["mean_score"],
-                    "best_layer_std": best_layer_info["std_score"]
+                    "best_layer_std": best_layer_info["std_score"],
                 }
         if model_best_layers:
             df_data = []
             for model, info in model_best_layers.items():
-                df_data.append({
-                    "model": model,
-                    "best_layer": info["best_layer"],
-                    "best_layer_score": info["best_layer_score"],
-                    "best_layer_std": info["best_layer_std"]
-                })
+                df_data.append(
+                    {
+                        "model": model,
+                        "best_layer": info["best_layer"],
+                        "best_layer_score": info["best_layer_score"],
+                        "best_layer_std": info["best_layer_std"],
+                    }
+                )
             model_best_layers_df = pd.DataFrame(df_data)
-            model_best_layers_df.to_csv(os.path.join(results_dir, f"agg_results_{region}.csv"), index=False)
-            
+            model_best_layers_df.to_csv(
+                os.path.join(results_dir, f"agg_results_{region}.csv"), index=False
+            )
+
+
 def collect_results(model_dir: str, monkey: str = "monkeyF"):
     """
     Collect results from a directory of results, containing files as:
@@ -70,6 +78,7 @@ def collect_results(model_dir: str, monkey: str = "monkeyF"):
                 results[region] = []
             results[region].append(df)
     return results
+
 
 if __name__ == "__main__":
     results_dir = "/users/jamullik/scratch/tvsd-copy/outputs/results/"

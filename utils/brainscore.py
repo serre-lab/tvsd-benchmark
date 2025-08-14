@@ -12,6 +12,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from torchvision.transforms.functional import resize, to_pil_image
 
+
 def brain_score_pearsonr(Y_pred, Y_test):
     """
     Compute the Pearson's correlation between the predicted and actual labels.
@@ -36,6 +37,7 @@ def brain_score_pearsonr(Y_pred, Y_test):
         pearsonr_correlations[i] = corr
 
     return pearsonr_correlations
+
 
 def brain_score_spearman(Y_pred, Y_test):
     """
@@ -64,7 +66,16 @@ def brain_score_spearman(Y_pred, Y_test):
     # print('brain_score_spearman: ', spearman_correlations)
     return spearman_correlations
 
-def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pearson', pca_components=100, preprocessed=True):
+
+def compute_brain_score(
+    X,
+    Y,
+    n_splits=4,
+    reducer="median",
+    correlation_fn="pearson",
+    pca_components=100,
+    preprocessed=True,
+):
     kf = KFold(n_splits=n_splits, shuffle=True, random_state=42)
     scores = []
     times = []
@@ -72,7 +83,7 @@ def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pear
         start_time = time()
         X_train, X_test = X[train_index], X[test_index]
         Y_train, Y_test = Y[train_index], Y[test_index]
-        
+
         if not preprocessed:
             scaler_X, scaler_Y = StandardScaler(), StandardScaler()
             X_train = scaler_X.fit_transform(X_train)
@@ -94,20 +105,22 @@ def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pear
         pls_reg.fit(X_train, Y_train)
         Y_pred = pls_reg.predict(X_test)
 
-        if correlation_fn == 'pearson':
-            correlations = brain_score_pearsonr(Y_pred, Y_test) # we are interested in the trend and no need to interpret the results in the original scale
-        elif correlation_fn == 'spearman':
+        if correlation_fn == "pearson":
+            correlations = brain_score_pearsonr(
+                Y_pred, Y_test
+            )  # we are interested in the trend and no need to interpret the results in the original scale
+        elif correlation_fn == "spearman":
             correlations = brain_score_spearman(Y_pred, Y_test)
         else:
-            raise ValueError('Unknown correlation metric')
-        
-        if reducer == 'median':
-            score = np.nanmedian(correlations)  
-        elif reducer == 'mean':   
-            score = np.nanmean(correlations)  
+            raise ValueError("Unknown correlation metric")
+
+        if reducer == "median":
+            score = np.nanmedian(correlations)
+        elif reducer == "mean":
+            score = np.nanmean(correlations)
         else:
-            raise ValueError('Unknown reducer')
-        
+            raise ValueError("Unknown reducer")
+
         scores.append(score)
         end_time = time()
         times.append(end_time - start_time)
@@ -116,6 +129,8 @@ def compute_brain_score(X, Y, n_splits=4, reducer='median', correlation_fn='pear
     layer_std = np.nanstd(scores)
 
     mean_time = np.mean(times)
-    print(f"Layer score: {layer_score:.4f}, Layer std: {layer_std:.4f}, Mean time per fold: {mean_time:.4f} seconds")
+    print(
+        f"Layer score: {layer_score:.4f}, Layer std: {layer_std:.4f}, Mean time per fold: {mean_time:.4f} seconds"
+    )
 
     return layer_score, layer_std
