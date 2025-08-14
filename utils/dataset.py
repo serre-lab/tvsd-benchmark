@@ -32,19 +32,23 @@ class TVSD_Dataset(Dataset):
         root_dir: str = "/users/jamullik/scratch/TVSD-real/data/TVSD",
         monkey: str = "monkeyF",
         split: str = "train",
-        array: int = 0,
+        region: str = "V1", # options: "V1", "V4", "IT"
     ):
         self.root_dir = os.path.join(root_dir, monkey)
         self.monkey = monkey
-        self.array = array
+        self.region = region
         self.split = split
         self.array_idxs = self._get_array_idxs()
-        self.region = self._get_region()
         self.paths = self._get_paths(split)
         self.responses, self.reliability = self._get_responses(split)
 
     def _get_array_idxs(self):
-        return list(range(self.array * 64, (self.array + 1) * 64))
+        array_nums = self._get_arrays_from_region()
+        array_idxs = set()
+        for array_num in array_nums:
+            idxs = list(range(array_num * 64, (array_num + 1) * 64))
+            array_idxs.update(idxs)
+        return sorted(list(array_idxs))
 
     def _get_region(self):
         region_dict = {
@@ -64,6 +68,25 @@ class TVSD_Dataset(Dataset):
             if self.array in idx_range:
                 return region
         raise ValueError(f"Invalid array index {self.array} for monkey {self.monkey}")
+    
+    def _get_arrays_from_region(self):
+        region_to_array = {
+            "monkeyN": {
+                "V1": list(range(0, 8)),
+                "V4": list(range(8, 12)),
+                "IT": list(range(12, 16)),
+            },
+            "monkeyF": {
+                "V1": list(range(0, 8)),
+                "IT": list(range(8, 13)),
+                "V4": list(range(13, 16)),
+            },
+        }
+        monkey_dict = region_to_array.get(self.monkey, {})
+        arrays = monkey_dict.get(self.region, None)
+        if arrays is None:
+            raise ValueError(f"Invalid region {self.region} for monkey {self.monkey}")
+        return arrays
 
     def _get_paths(self, split: str):
         if split not in ["train", "test"]:

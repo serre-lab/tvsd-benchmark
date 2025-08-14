@@ -9,4 +9,4 @@ matplotlib
 tqdm
 h5py
 pyyaml
-timm
+opencv-python
