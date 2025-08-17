@@ -21,7 +21,7 @@ def main(args):
     # layers = [name for name, module in model.named_modules() if 'relu' not in name]
 
     tvsd_dataset = TVSD_Dataset(
-        root_dir=args.root_dir, monkey=args.monkey, split="train", array=args.array
+        root_dir=args.root_dir, monkey=args.monkey, split="train", region=args.region
     )
 
     layer_scores = {}
@@ -77,7 +77,7 @@ def main(args):
     for layer, scores in layer_scores.items():
         print(f"{layer}: Score = {scores['score']}, Std = {scores['std']}")
     results_file = (
-        f"{args.output_dir}/results/{model_name}/{args.monkey}_arr_{args.array}.csv"
+        f"{args.output_dir}/results/{model_name}/{args.monkey}_arr_{args.region}.csv"
     )
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
     with open(results_file, "w") as f:
@@ -108,7 +108,7 @@ if __name__ == "__main__":
         help="Monkey name to use in the dataset.",
     )
     parser.add_argument(
-        "--array", type=int, default=0, help="Which neural array to use."
+        "--region", type=str, default="IT", choices=["V1", "V4", "IT"], help="Which brain region to benchmark."
     )
     parser.add_argument(
         "--output_dir",

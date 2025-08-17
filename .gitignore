@@ -5,3 +5,4 @@ models/
 outputs/
 configs/timm/
 */__pycache__/
+env/
