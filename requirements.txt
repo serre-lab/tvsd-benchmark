@@ -10,3 +10,5 @@ tqdm
 h5py
 pyyaml
 opencv-python
+pytest
+pytest-cov

@@ -21,7 +21,7 @@ def main(args):
     # layers = [name for name, module in model.named_modules() if 'relu' not in name]
 
     tvsd_dataset = TVSD_Dataset(
-        root_dir=args.root_dir, monkey=args.monkey, split="train", region=args.region
+        root_dir=args.root_dir, monkey=args.monkey, region=args.region
     )
 
     layer_scores = {}
@@ -108,7 +108,11 @@ if __name__ == "__main__":
         help="Monkey name to use in the dataset.",
     )
     parser.add_argument(
-        "--region", type=str, default="IT", choices=["V1", "V4", "IT"], help="Which brain region to benchmark."
+        "--region",
+        type=str,
+        default="IT",
+        choices=["V1", "V4", "IT"],
+        help="Which brain region to benchmark.",
     )
     parser.add_argument(
         "--output_dir",

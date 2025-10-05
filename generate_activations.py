@@ -31,10 +31,10 @@ def main(args):
     activations.register(model, hook_layers)
 
     tvsd_dataset = TVSD_Dataset(
-        root_dir=args.root_dir, monkey=args.monkey, split="train", array=args.array
+        root_dir=args.root_dir, monkey=args.monkey, region=args.region
     )
     things_dataset = tvsd_dataset.get_things(
-        things_path=args.things_path, split="train", transform=transform
+        things_path=args.things_path, transform=transform
     )
     things_loader = DataLoader(
         things_dataset, batch_size=args.batch_size, shuffle=False
@@ -98,7 +98,11 @@ if __name__ == "__main__":
         help="Monkey name to use in the dataset.",
     )
     parser.add_argument(
-        "--array", type=int, default=0, help="Which neural array to use."
+        "--region",
+        type=str,
+        default="V1",
+        choices=["V1", "V4", "IT"],
+        help="Which brain region to use.",
     )
     parser.add_argument(
         "--things_path",

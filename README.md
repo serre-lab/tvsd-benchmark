@@ -48,7 +48,7 @@ sbatch scripts/benchmark.sh [MODEL_CONFIG_PATH]
 
 Fill `configs/models.csv` with the names of the models you want to benchmark. Then run
 ```bash
-sbatch all_models.sh
+sbatch scripts/all_models.sh
 ```
 Which will generative and evaluate activations for each model.
 
