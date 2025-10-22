@@ -12,3 +12,4 @@ pyyaml
 opencv-python
 pytest
 pytest-cov
+osfclient
