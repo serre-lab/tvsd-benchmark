@@ -5,6 +5,8 @@ import torch
 from sklearn.decomposition import IncrementalPCA
 from typing import List, Dict, Optional
 
+from utils.timm_helpers import detect_model_family, process_activations
+
 
 class Activations:
     def __init__(
@@ -25,6 +27,8 @@ class Activations:
         self._training_mode = False
         self.pca_components = pca_components
         self._training_activations = {}  # {layer_name: [activations]}
+        # Detect model family for proper activation processing
+        self.model_family = detect_model_family(model_name)
 
     def set_batch(self, batch):
         self._current_batch = batch
@@ -35,8 +39,8 @@ class Activations:
     def _get_hook(self, layer_name, debug=False):
         def hook_fn(module, input, output):
             if self._active:
-                if isinstance(output, list) or isinstance(output, tuple):
-                    output = torch.stack(output, dim=0)
+                # Use timm_helpers to properly process activations
+                output = process_activations(output, self.model_family)
 
                 if self._training_mode:
                     self._handle_training_mode(layer_name, output)
