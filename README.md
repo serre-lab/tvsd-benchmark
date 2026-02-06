@@ -67,7 +67,7 @@ In the current configuration, each model is specified by a corresponding config 
 
 This repository now has full support for models from the [timm](https://github.com/huggingface/pytorch-image-models) library. To benchmark a timm model:
 
-1. **Create a config file** in `configs/timm/` (or use one of the provided examples):
+1. **Create a config file** (or use one of the provided examples in `configs/examples/`):
 
 ```yaml
 model-name: resnet50  # Any timm model name
@@ -86,8 +86,8 @@ transform:
 2. **Run benchmarking** as usual:
 
 ```bash
-sbatch scripts/generate_activations.sh configs/timm/resnet50.yaml
-sbatch scripts/benchmark.sh configs/timm/resnet50.yaml
+sbatch scripts/generate_activations.sh configs/examples/resnet50.yaml
+sbatch scripts/benchmark.sh configs/examples/resnet50.yaml
 ```
 
 ### Supported Model Families
@@ -99,7 +99,7 @@ The following timm model families are fully supported with specialized activatio
 - **ConvNeXt** (`convnext_base`, `convnext_tiny`, etc.) - Modern CNN with stages
 - **Swin Transformer** (`swin_base_patch4_window7_224`, `swin_tiny_patch4_window7_224`, etc.) - Hierarchical vision transformers
 
-Example configs for these models are provided in `configs/timm/`.
+Example configs for these models are provided in `configs/examples/`.
 
 ### Note on Model Names
 
