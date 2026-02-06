@@ -95,11 +95,8 @@ def process_activations(output: torch.Tensor, model_family: str) -> torch.Tensor
     """
     # Handle tuple/list outputs (e.g., from some model layers)
     if isinstance(output, (list, tuple)):
-        # Take the first element or stack if multiple
-        if len(output) == 1:
-            output = output[0]
-        else:
-            output = torch.stack(list(output), dim=0)
+        # Take the first element if multiple outputs are provided
+        output = output[0]
     
     # Apply family-specific processing
     if model_family == 'vit':

@@ -199,8 +199,17 @@ class TestTimmActivationExtraction:
             pca_components=None,
         )
 
-        # Register hooks on transformer blocks
-        layer_names = ["blocks.0", "blocks.5", "blocks.11"]
+        # Dynamically find transformer block layers
+        block_layers = [name for name, _ in model.named_modules() if name.startswith("blocks.")]
+        # Select a few blocks (but ensure they exist)
+        if len(block_layers) >= 3:
+            layer_names = [block_layers[0], block_layers[len(block_layers)//2], block_layers[-1]]
+        else:
+            layer_names = block_layers[:min(3, len(block_layers))]
+        
+        if not layer_names:
+            pytest.skip("No transformer blocks found in model")
+        
         activations.register(model, layer_names)
         
         # Forward pass
@@ -265,8 +274,14 @@ class TestTimmActivationExtraction:
             pca_components=None,
         )
 
-        # Register hooks on layers
-        layer_names = ["layers.0", "layers.1", "layers.2"]
+        # Dynamically find layer modules
+        swin_layers = [name for name, _ in model.named_modules() if name.startswith("layers.")]
+        # Select available layers (up to 3)
+        layer_names = swin_layers[:min(3, len(swin_layers))]
+        
+        if not layer_names:
+            pytest.skip("No Swin layers found in model")
+        
         activations.register(model, layer_names)
         
         # Forward pass

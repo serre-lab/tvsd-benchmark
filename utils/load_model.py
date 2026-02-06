@@ -6,10 +6,12 @@ import torch
 from torchvision import transforms
 
 # Only import RESMAX if available (for hmax models)
+# Note: This path is user-specific. Set the RESMAX_PATH environment variable
+# or modify this path for your environment if using HMAX models.
 try:
-    sys.path.append(
-        "/users/jamullik/pytorch-image-models/"
-    )  # hacky for now, need to fix this later
+    import os
+    resmax_path = os.environ.get('RESMAX_PATH', '/users/jamullik/pytorch-image-models/')
+    sys.path.append(resmax_path)
     from timm.models.RESMAX import chresmax_v3
     HAS_RESMAX = True
 except ImportError:
