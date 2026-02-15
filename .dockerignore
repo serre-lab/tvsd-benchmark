@@ -1,0 +1,16 @@
+.git
+.gitignore
+__pycache__/
+.pytest_cache/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.env
+.venv/
+env/
+logs/
+outputs/
+data/
+notebooks/

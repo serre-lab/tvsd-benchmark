@@ -4,6 +4,7 @@ torch
 torch-pca
 torchvision
 osfclient
+pandas
 scikit-learn
 matplotlib
 tqdm
