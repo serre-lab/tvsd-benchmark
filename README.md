@@ -9,7 +9,20 @@ Begin by cloning the repository.
 git clone git@github.com:serre-lab/tvsd-benchmark.git
 cd tvsd-benchmark
 ```
-Next, create a `conda` environment with our requirements.
+
+### Option 1: Docker + Make (recommended)
+Build the container image and run the unit tests:
+```bash
+make build
+make test
+```
+Open a shell in the container:
+```bash
+make shell
+```
+
+### Option 2: Local Python environment
+Create a `conda` environment with our requirements.
 ```bash
 conda create -n tvsd-benchmark
 conda activate tvsd-benchmark
@@ -34,7 +47,7 @@ chmod +x scripts/download_things.sh
 
 ## Benchmarking a Model
 
-Ensure that you have your virtual envirovnment activated, and run
+Ensure that you have your environment activated, and run
 ```bash
 sbatch scripts/generate_activations.sh [MODEL_CONFIG_PATH]
 ```
@@ -43,6 +56,11 @@ When this completes, run
 sbatch scripts/benchmark.sh [MODEL_CONFIG_PATH]
 ```
 (We separate the two jobs, as only the former requires a GPU.) The results will populate `outputs/results/[model]`.
+
+To run unit tests locally without Docker:
+```bash
+make test-local
+```
 
 ## Benchmarking a Suite of Models
 
