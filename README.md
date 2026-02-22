@@ -28,11 +28,18 @@ conda create -n tvsd-benchmark
 conda activate tvsd-benchmark
 pip install -r requirements.txt
 ```
+
+For timm model support, ensure timm is installed:
+```bash
+pip install timm
+```
+
 Alternatively, you can use a `venv` environment.
 ```bash
 python -m venv env
 source env/bin/activate
 pip install -r requirements.txt
+pip install timm
 ```
 To obtain the TVSD dataset, run
 ```bash
@@ -72,4 +79,50 @@ Which will generative and evaluate activations for each model.
 
 ## Adding Your Own Model
 
-In the current configuration, each model is specified by a corresponding config file in `configs`. Making a new config for your model is self-explanatory--just follow the outline of the existing ones. You will also have to build out `utils/load_model.py` to accept your added model. In the future, direct integration with `timm` will be provided. 
+In the current configuration, each model is specified by a corresponding config file in `configs`. Making a new config for your model is self-explanatory--just follow the outline of the existing ones. You will also have to build out `utils/load_model.py` to accept your added model.
+
+## Using Timm Models
+
+This repository now has full support for models from the [timm](https://github.com/huggingface/pytorch-image-models) library. To benchmark a timm model:
+
+1. **Create a config file** (or use one of the provided examples in `configs/examples/`):
+
+```yaml
+model-name: resnet50  # Any timm model name
+model-source: timm
+pretrained: true  # Set to false to use random weights
+hook-interval: 8  # Interval for activation extraction
+transform:
+  - name: Resize
+    size: [224, 224]
+  - name: ToTensor
+  - name: Normalize
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+```
+
+2. **Run benchmarking** as usual:
+
+```bash
+sbatch scripts/generate_activations.sh configs/examples/resnet50.yaml
+sbatch scripts/benchmark.sh configs/examples/resnet50.yaml
+```
+
+### Supported Model Families
+
+The following timm model families are fully supported with specialized activation extraction:
+
+- **ResNet** (`resnet50`, `resnet101`, etc.) - Standard CNN architecture
+- **Vision Transformers** (`vit_base_patch16_224`, `vit_tiny_patch16_224`, etc.) - Handles token/cls shapes
+- **ConvNeXt** (`convnext_base`, `convnext_tiny`, etc.) - Modern CNN with stages
+- **Swin Transformer** (`swin_base_patch4_window7_224`, `swin_tiny_patch4_window7_224`, etc.) - Hierarchical vision transformers
+
+Example configs for these models are provided in `configs/examples/`.
+
+### Note on Model Names
+
+You can list all available timm models using:
+```python
+import timm
+print(timm.list_models(pretrained=True))
+``` 

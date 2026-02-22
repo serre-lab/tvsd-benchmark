@@ -1,14 +1,21 @@
 import sys
 import yaml
 
-# import timm
+import timm
 import torch
 from torchvision import transforms
 
-sys.path.append(
-    "/users/jamullik/pytorch-image-models/"
-)  # hacky for now, need to fix this later
-from timm.models.RESMAX import chresmax_v3
+# Only import RESMAX if available (for hmax models)
+# Note: This path is user-specific. Set the RESMAX_PATH environment variable
+# or modify this path for your environment if using HMAX models.
+try:
+    import os
+    resmax_path = os.environ.get('RESMAX_PATH', '/users/jamullik/pytorch-image-models/')
+    sys.path.append(resmax_path)
+    from timm.models.RESMAX import chresmax_v3
+    HAS_RESMAX = True
+except ImportError:
+    HAS_RESMAX = False
 
 
 def load_model(config_path: str):
@@ -64,12 +71,18 @@ def load_torchvision_model(config: dict):
 
 
 def load_timm_model(config: dict):
-    model = timm.create_model(config["model-name"], pretrained=True)
+    pretrained = config.get("pretrained", True)
+    model = timm.create_model(config["model-name"], pretrained=pretrained)
     model_name = config["model-name"]
     return model, model_name
 
 
 def load_hmax_model(config: dict):
+    if not HAS_RESMAX:
+        raise ImportError(
+            "RESMAX module is not available. Please check your installation."
+        )
+    
     if config["model-type"] == "chresmax_v3":
         checkpoint = torch.load(
             config["hmax-info"]["ckpt_path"],
