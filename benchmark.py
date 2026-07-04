@@ -43,8 +43,13 @@ def main(args):
             print(f"No activations found for layer: {layer}")
             continue
 
+        # float32: float16 overflows StandardScaler's in-place divide to inf.
         activations = (
-            activations.reshape(activations.shape[0], -1).detach().cpu().numpy()
+            activations.reshape(activations.shape[0], -1)
+            .detach()
+            .cpu()
+            .float()
+            .numpy()
         )  # [B, H * W * C]
         neural_responses, reliability = tvsd_dataset[: activations.shape[0]]
         reliability_mask = reliability > args.reliability_threshold

@@ -1,14 +1,8 @@
-import sys
 import yaml
 
-# import timm
+import timm
 import torch
 from torchvision import transforms
-
-sys.path.append(
-    "/users/jamullik/pytorch-image-models/"
-)  # hacky for now, need to fix this later
-from timm.models.RESMAX import chresmax_v3
 
 
 def load_model(config_path: str):
@@ -71,6 +65,15 @@ def load_timm_model(config: dict):
 
 def load_hmax_model(config: dict):
     if config["model-type"] == "chresmax_v3":
+        # Lazy: chresmax lives in a custom timm fork, not pip-installable.
+        try:
+            from timm.models.RESMAX import chresmax_v3
+        except ImportError as e:
+            raise ImportError(
+                "chresmax_v3 requires the custom pytorch-image-models fork "
+                "(https://github.com/npant14/pytorch-image-models) to be installed."
+            ) from e
+
         checkpoint = torch.load(
             config["hmax-info"]["ckpt_path"],
             map_location="cuda" if torch.cuda.is_available() else "cpu",
@@ -117,6 +120,11 @@ def resolve_transform(model_config: str):
         config = yaml.safe_load(file)
 
     transform_specs = config.get("transform", {})
+
+    # `transform: timm` builds the model's native eval transform.
+    if transform_specs == "timm":
+        return resolve_timm_transform(config["model-name"])
+
     transform_list = []
 
     for spec in transform_specs:
@@ -133,3 +141,13 @@ def resolve_transform(model_config: str):
 
     transform = transforms.Compose(transform_list)
     return transform
+
+
+def resolve_timm_transform(model_name: str):
+    """Build a timm model's native eval transform from its pretrained_cfg
+    (no weight download / instantiation)."""
+    from timm.data import create_transform, resolve_data_config
+
+    pretrained_cfg = timm.get_pretrained_cfg(model_name).to_dict()
+    data_config = resolve_data_config(args={}, pretrained_cfg=pretrained_cfg)
+    return create_transform(**data_config, is_training=False)

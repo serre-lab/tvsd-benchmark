@@ -70,6 +70,31 @@ sbatch scripts/all_models.sh
 ```
 Which will generative and evaluate activations for each model.
 
+## Benchmarking timm Models
+
+Any pretrained [`timm`](https://github.com/huggingface/pytorch-image-models) model is supported out of the box. To generate a config for every pretrained timm model, run
+```bash
+python -m utils.populate_timm
+```
+which writes one config per model into `configs/timm/`. Each config uses `transform: timm`, which builds the model's *native* evaluation transform (correct input size, crop, interpolation, and normalization) from its pretrained config at load time--so no transform needs to be hand-written per model.
+
+To benchmark a single timm model, either point the pipeline at a generated config or write a minimal one yourself:
+```yaml
+model-name: vit_base_patch16_384
+model-type: timm
+model-source: timm
+hook-interval: 5
+transform: timm
+```
+
 ## Adding Your Own Model
 
-In the current configuration, each model is specified by a corresponding config file in `configs`. Making a new config for your model is self-explanatory--just follow the outline of the existing ones. You will also have to build out `utils/load_model.py` to accept your added model. In the future, direct integration with `timm` will be provided. 
+In the current configuration, each model is specified by a corresponding config file in `configs`. Making a new config for your model is self-explanatory--just follow the outline of the existing ones. For non-timm/torchvision models you will also have to build out `utils/load_model.py` to accept your added model.
+
+### HMAX / chresmax models
+
+The `chresmax_v3` (HMAX) model is defined in the Serre Lab [fork of `pytorch-image-models`](https://github.com/npant14/pytorch-image-models) (as `timm.models.RESMAX`) and is **not** part of the upstream `timm` package. To benchmark it, install that fork in place of the pip `timm` package:
+```bash
+pip install -e /path/to/serre-lab/pytorch-image-models
+```
+The import is lazy, so the rest of the pipeline (including all standard timm models) works fine without it.
