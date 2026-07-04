@@ -3,6 +3,7 @@ scipy
 torch
 torch-pca
 torchvision
+timm
 osfclient
 pandas
 scikit-learn

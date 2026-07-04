@@ -4,24 +4,23 @@ import yaml
 
 
 def populate_timm():
-    standard_imagenet_transform = [
-        {"name": "Resize", "size": [224, 224]},
-        {"name": "ToTensor"},
-        {
-            "name": "Normalize",
-            "mean": [0.485, 0.456, 0.406],
-            "std": [0.229, 0.224, 0.225],
-        },
-    ]
+    """
+    Generate a config file for every pretrained timm model.
+
+    Each config uses `transform: timm`, which tells `resolve_transform` to
+    build the model's native eval transform from its pretrained config at load
+    time (correct input size, crop, interpolation, and normalization). This
+    keeps every model correct without hand-writing a transform per model.
+    """
+    os.makedirs("configs/timm", exist_ok=True)
     for model in timm.list_models(pretrained=True):
         model_config = {
             "model-name": model,
             "model-type": "timm",
             "model-source": "timm",
             "hook-interval": 5,
-            "transform": standard_imagenet_transform,
+            "transform": "timm",
         }
-        os.makedirs(f"configs/timm", exist_ok=True)
         with open(f"configs/timm/{model}.yaml", "w") as f:
             yaml.dump(model_config, f)
 

@@ -43,8 +43,15 @@ def main(args):
             print(f"No activations found for layer: {layer}")
             continue
 
+        # Cast to float32: activations are stored as float16, and downstream
+        # StandardScaler divides in-place in the input dtype, which overflows
+        # to inf for low-variance features when left as float16.
         activations = (
-            activations.reshape(activations.shape[0], -1).detach().cpu().numpy()
+            activations.reshape(activations.shape[0], -1)
+            .detach()
+            .cpu()
+            .float()
+            .numpy()
         )  # [B, H * W * C]
         neural_responses, reliability = tvsd_dataset[: activations.shape[0]]
         reliability_mask = reliability > args.reliability_threshold

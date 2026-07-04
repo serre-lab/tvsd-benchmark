@@ -1,14 +1,8 @@
-import sys
 import yaml
 
-# import timm
+import timm
 import torch
 from torchvision import transforms
-
-sys.path.append(
-    "/users/jamullik/pytorch-image-models/"
-)  # hacky for now, need to fix this later
-from timm.models.RESMAX import chresmax_v3
 
 
 def load_model(config_path: str):
@@ -71,6 +65,16 @@ def load_timm_model(config: dict):
 
 def load_hmax_model(config: dict):
     if config["model-type"] == "chresmax_v3":
+        # HMAX models live in a custom timm fork that is not pip-installable.
+        # Import lazily so the rest of the pipeline works without it.
+        try:
+            from timm.models.RESMAX import chresmax_v3
+        except ImportError as e:
+            raise ImportError(
+                "chresmax_v3 requires the custom pytorch-image-models fork "
+                "(github.com/serre-lab/pytorch-image-models) to be installed."
+            ) from e
+
         checkpoint = torch.load(
             config["hmax-info"]["ckpt_path"],
             map_location="cuda" if torch.cuda.is_available() else "cpu",
@@ -117,6 +121,14 @@ def resolve_transform(model_config: str):
         config = yaml.safe_load(file)
 
     transform_specs = config.get("transform", {})
+
+    # timm models carry their own input size / crop / normalization in their
+    # pretrained config. Setting `transform: timm` builds the model's native
+    # eval transform, so every timm model gets the correct preprocessing for
+    # free (no need to hand-write a transform per model).
+    if transform_specs == "timm":
+        return resolve_timm_transform(config["model-name"])
+
     transform_list = []
 
     for spec in transform_specs:
@@ -133,3 +145,24 @@ def resolve_transform(model_config: str):
 
     transform = transforms.Compose(transform_list)
     return transform
+
+
+def resolve_timm_transform(model_name: str):
+    """
+    Build a timm model's native evaluation transform from its pretrained
+    config (input size, crop, interpolation, normalization).
+
+    This reads the model's `pretrained_cfg` and does not download weights, so
+    it works for any pretrained timm model without instantiating it.
+
+    Args:
+        model_name (str): Name of the timm model.
+
+    Returns:
+        transform: The model's native eval transform.
+    """
+    from timm.data import create_transform, resolve_data_config
+
+    pretrained_cfg = timm.get_pretrained_cfg(model_name).to_dict()
+    data_config = resolve_data_config(args={}, pretrained_cfg=pretrained_cfg)
+    return create_transform(**data_config, is_training=False)
