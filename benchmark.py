@@ -43,9 +43,7 @@ def main(args):
             print(f"No activations found for layer: {layer}")
             continue
 
-        # Cast to float32: activations are stored as float16, and downstream
-        # StandardScaler divides in-place in the input dtype, which overflows
-        # to inf for low-variance features when left as float16.
+        # float32: float16 overflows StandardScaler's in-place divide to inf.
         activations = (
             activations.reshape(activations.shape[0], -1)
             .detach()
