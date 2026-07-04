@@ -72,7 +72,7 @@ def load_hmax_model(config: dict):
         except ImportError as e:
             raise ImportError(
                 "chresmax_v3 requires the custom pytorch-image-models fork "
-                "(github.com/serre-lab/pytorch-image-models) to be installed."
+                "(https://github.com/npant14/pytorch-image-models) to be installed."
             ) from e
 
         checkpoint = torch.load(
