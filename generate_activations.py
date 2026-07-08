@@ -1,11 +1,8 @@
 import os
 import argparse
-import json
 from tqdm import tqdm
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
-from typing import Optional
 
 from utils.dataset import TVSD_Dataset
 from utils.hooks import Activations
@@ -30,22 +27,13 @@ def main(args):
     )
     activations.register(model, hook_layers)
 
-    tvsd_dataset = TVSD_Dataset(
-        root_dir=args.root_dir, monkey=args.monkey, region=args.region
-    )
-    things_dataset = tvsd_dataset.get_things(
-        things_path=args.things_path, transform=transform
-    )
-    things_loader = DataLoader(
-        things_dataset, batch_size=args.batch_size, shuffle=False
-    )
-    shuffled_things_loader = DataLoader(
-        things_dataset, batch_size=args.batch_size, shuffle=True
-    )
+    tvsd_dataset = TVSD_Dataset(root_dir=args.root_dir, monkey=args.monkey, region=args.region)
+    things_dataset = tvsd_dataset.get_things(things_path=args.things_path, transform=transform)
+    things_loader = DataLoader(things_dataset, batch_size=args.batch_size, shuffle=False)
+    shuffled_things_loader = DataLoader(things_dataset, batch_size=args.batch_size, shuffle=True)
 
     if args.pca_components is not None:
         print("Training IPCA models...")
-        max_pca_train_batches = args.max_pca_train_batches
         activations.set_training_mode(True)
 
         for i, batch in tqdm(enumerate(shuffled_things_loader), desc="Training IPCA"):
@@ -110,18 +98,14 @@ if __name__ == "__main__":
         default=f"{os.getcwd()}/data/THINGS/object_images",
         help="Path to the THINGS dataset.",
     )
-    parser.add_argument(
-        "--batch_size", type=int, default=16, help="Batch size for the DataLoader."
-    )
+    parser.add_argument("--batch_size", type=int, default=16, help="Batch size for the DataLoader.")
     parser.add_argument(
         "--output_dir",
         type=str,
         default=f"{os.getcwd()}/outputs",
         help="Directory to save activations.",
     )
-    parser.add_argument(
-        "--max_batches", type=int, help="Maximum number of batches to process."
-    )
+    parser.add_argument("--max_batches", type=int, help="Maximum number of batches to process.")
     parser.add_argument(
         "--max_pca_train_batches",
         type=str,

@@ -1,13 +1,11 @@
 """Tests for utils.dataset module."""
+
 import pytest
 import numpy as np
 import torch
-from unittest.mock import Mock, patch, MagicMock
-import h5py
-import tempfile
-import os
+from unittest.mock import patch
 
-from utils.dataset import TVSD_BaseDataset, TVSD_Dataset, TVSD_TestDataset, THINGS_Dataset
+from utils.dataset import TVSD_BaseDataset, TVSD_TestDataset, THINGS_Dataset
 
 
 class TestTHINGSDataset:
@@ -36,62 +34,62 @@ class TestTVSDBaseDataset:
 
     def test_get_arrays_from_region_monkeyF_V1(self):
         """Test array indices for monkeyF V1 region."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 arrays = dataset._get_arrays_from_region()
                 assert arrays == list(range(0, 8))
 
     def test_get_arrays_from_region_monkeyF_IT(self):
         """Test array indices for monkeyF IT region."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="IT")
                 arrays = dataset._get_arrays_from_region()
                 assert arrays == list(range(8, 13))
 
     def test_get_arrays_from_region_monkeyF_V4(self):
         """Test array indices for monkeyF V4 region."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V4")
                 arrays = dataset._get_arrays_from_region()
                 assert arrays == list(range(13, 16))
 
     def test_get_arrays_from_region_monkeyN_V1(self):
         """Test array indices for monkeyN V1 region."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyN", region="V1")
                 arrays = dataset._get_arrays_from_region()
                 assert arrays == list(range(0, 8))
 
     def test_get_arrays_from_region_monkeyN_V4(self):
         """Test array indices for monkeyN V4 region."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyN", region="V4")
                 arrays = dataset._get_arrays_from_region()
                 assert arrays == list(range(8, 12))
 
     def test_get_arrays_from_region_monkeyN_IT(self):
         """Test array indices for monkeyN IT region."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyN", region="IT")
                 arrays = dataset._get_arrays_from_region()
                 assert arrays == list(range(12, 16))
 
     def test_get_arrays_from_region_invalid(self):
         """Test invalid region raises ValueError."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
             with pytest.raises(ValueError, match="Invalid region"):
                 TVSD_BaseDataset(monkey="monkeyF", region="INVALID")
 
     def test_get_array_idxs(self):
         """Test that array_idxs are correctly computed from arrays."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 # V1 has arrays 0-7, each array has 64 channels
                 # So indices should be 0-511
@@ -103,8 +101,10 @@ class TestTVSDBaseDataset:
         responses = torch.randn(100, 512)
         reliability = torch.randn(512)
 
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(responses, reliability)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(
+                TVSD_BaseDataset, "_get_responses", return_value=(responses, reliability)
+            ):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 response, rel = dataset[0]
                 assert torch.allclose(response, responses[0])
@@ -115,8 +115,10 @@ class TestTVSDBaseDataset:
         responses = torch.randn(100, 512)
         reliability = torch.randn(512)
 
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(responses, reliability)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(
+                TVSD_BaseDataset, "_get_responses", return_value=(responses, reliability)
+            ):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 response, rel = dataset[0:10]
                 assert torch.allclose(response, responses[0:10])
@@ -127,8 +129,10 @@ class TestTVSDBaseDataset:
         responses = torch.randn(100, 512)
         reliability = torch.randn(512)
 
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(responses, reliability)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(
+                TVSD_BaseDataset, "_get_responses", return_value=(responses, reliability)
+            ):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 indices = [0, 5, 10]
                 response, rel = dataset[indices]
@@ -140,8 +144,10 @@ class TestTVSDBaseDataset:
         responses = torch.randn(100, 512)
         reliability = torch.randn(512)
 
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(responses, reliability)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(
+                TVSD_BaseDataset, "_get_responses", return_value=(responses, reliability)
+            ):
                 dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 with pytest.raises(TypeError, match="Unsupported index type"):
                     _ = dataset["invalid"]
@@ -156,8 +162,8 @@ class TestTVSDTestDataset:
         np.random.seed(42)
         data = np.random.randn(30, 100, 10)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 reliability = dataset._compute_reliability(data, n_boot=10, random_state=42)
 
@@ -169,8 +175,8 @@ class TestTVSDTestDataset:
         np.random.seed(42)
         data = np.random.randn(30, 100, 10)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 rel1 = dataset._compute_reliability(data, n_boot=10, random_state=42)
                 rel2 = dataset._compute_reliability(data, n_boot=10, random_state=42)
@@ -182,8 +188,8 @@ class TestTVSDTestDataset:
         np.random.seed(42)
         data = np.random.randn(30, 100, 10)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 rel1 = dataset._compute_reliability(data, n_boot=10, random_state=42)
                 rel2 = dataset._compute_reliability(data, n_boot=10, random_state=99)
@@ -191,6 +197,7 @@ class TestTVSDTestDataset:
                 # Should be different but correlated
                 assert not np.allclose(rel1, rel2)
                 from scipy.stats import pearsonr
+
                 corr, _ = pearsonr(rel1, rel2)
                 assert corr > 0.8  # Should be highly correlated
 
@@ -199,8 +206,8 @@ class TestTVSDTestDataset:
         np.random.seed(42)
         data = np.random.randn(30, 100, 10)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 reliability = dataset._compute_reliability(
                     data, n_boot=10, n_reps_subset=15, random_state=42
@@ -211,15 +218,19 @@ class TestTVSDTestDataset:
 
     def test_init_recompute_reliability_params(self):
         """Test initialization parameters for recompute_reliability."""
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses', return_value=(np.zeros((30, 100, 10)), torch.zeros(10))):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(
+                TVSD_TestDataset,
+                "_get_responses",
+                return_value=(np.zeros((30, 100, 10)), torch.zeros(10)),
+            ):
                 dataset = TVSD_TestDataset(
                     monkey="monkeyF",
                     region="V1",
                     recompute_reliability=True,
                     n_boot=50,
                     n_reps_subset=20,
-                    random_state=123
+                    random_state=123,
                 )
 
                 assert dataset.recompute_reliability == True
@@ -229,8 +240,12 @@ class TestTVSDTestDataset:
 
     def test_init_default_params(self):
         """Test default initialization parameters."""
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses', return_value=(np.zeros((30, 100, 10)), torch.zeros(10))):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(
+                TVSD_TestDataset,
+                "_get_responses",
+                return_value=(np.zeros((30, 100, 10)), torch.zeros(10)),
+            ):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
 
                 assert dataset.recompute_reliability == False
@@ -244,8 +259,8 @@ class TestDatasetIntegration:
 
     def test_array_channel_mapping_consistency(self):
         """Test that array-to-channel mapping is consistent across regions."""
-        with patch.object(TVSD_BaseDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_BaseDataset, '_get_responses', return_value=(None, None)):
+        with patch.object(TVSD_BaseDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_BaseDataset, "_get_responses", return_value=(None, None)):
                 # Test that total channels add up to 1024 (16 arrays * 64 channels)
                 v1_dataset = TVSD_BaseDataset(monkey="monkeyF", region="V1")
                 it_dataset = TVSD_BaseDataset(monkey="monkeyF", region="IT")

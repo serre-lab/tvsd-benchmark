@@ -14,4 +14,8 @@ pyyaml
 opencv-python
 pytest
 pytest-cov
+ruff
+mypy
+types-PyYAML
+pre-commit
 osfclient

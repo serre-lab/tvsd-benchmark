@@ -1,16 +1,10 @@
-import torch
-import torch.nn.functional as F
 import numpy as np
-import matplotlib.pyplot as plt
 from time import time
-from tqdm import tqdm
 from scipy.stats import pearsonr, spearmanr
 from sklearn.model_selection import KFold
-from sklearn.metrics import r2_score
 from sklearn.cross_decomposition import PLSRegression
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
-from torchvision.transforms.functional import resize, to_pil_image
 
 
 def brain_score_pearsonr(Y_pred, Y_test):

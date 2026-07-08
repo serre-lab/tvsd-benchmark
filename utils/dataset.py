@@ -10,7 +10,7 @@ from typing import Callable, Optional
 
 
 class THINGS_Dataset(Dataset):
-    def __init__(self, root_dir: str, paths: list, transform: Callable = None):
+    def __init__(self, root_dir: str, paths: list, transform: Optional[Callable] = None):
         self.root_dir = root_dir
         self.paths = paths
         self.transform = transform
@@ -99,12 +99,7 @@ class TVSD_BaseDataset(Dataset):
             dataset = f[key]
             num_samples = dataset["things_path"].shape[0]
             paths = [
-                (
-                    f[dataset["things_path"][i][0]][()]
-                    .tobytes()
-                    .decode("utf-16")
-                    .replace("\\", "/")
-                )
+                (f[dataset["things_path"][i][0]][()].tobytes().decode("utf-16").replace("\\", "/"))
                 for i in range(num_samples)
             ]
         return paths
@@ -116,7 +111,7 @@ class TVSD_BaseDataset(Dataset):
     def get_things(
         self,
         things_path: str = "/users/jamullik/scratch/TVSD-real/data/object_images",
-        transform: Callable = None,
+        transform: Optional[Callable] = None,
     ) -> THINGS_Dataset:
         return THINGS_Dataset(things_path, self.paths, transform=transform)
 
@@ -153,9 +148,7 @@ class TVSD_Dataset(TVSD_BaseDataset):
             dataset = f["train_MUA"][()]
             print(f.keys())
             print("dataset shape", dataset.shape)
-            reliability = torch.mean(
-                torch.tensor(f["reliab"][()], dtype=torch.float32), dim=0
-            )
+            reliability = torch.mean(torch.tensor(f["reliab"][()], dtype=torch.float32), dim=0)
         # Train data: 2D indexing [samples, channels]
         return dataset[:, self.array_idxs], reliability[self.array_idxs]
 

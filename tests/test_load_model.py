@@ -1,4 +1,5 @@
 """Tests for utils.load_model, focused on timm compatibility."""
+
 import os
 import tempfile
 
@@ -48,6 +49,20 @@ def test_resolve_timm_transform_uses_native_input_size():
     assert tuple(crops[0].size) == (384, 384)
 
 
+def test_resolve_timm_transform_unknown_model_raises_clearly():
+    """An unknown timm model name must raise a clear ValueError.
+
+    Regression: get_pretrained_cfg returns None for unknown models, which
+    previously blew up with an opaque AttributeError on `.to_dict()`.
+    """
+    from utils.load_model import resolve_transform
+
+    with tempfile.TemporaryDirectory() as tmp_path:
+        config_path = _write_config(tmp_path, **{"model-name": "definitely_not_a_timm_model"})
+        with pytest.raises(ValueError, match="Unknown timm model"):
+            resolve_transform(config_path)
+
+
 def test_resolve_transform_still_supports_explicit_specs():
     """The existing spec-based transform path must keep working."""
     from torchvision import transforms
@@ -74,3 +89,51 @@ def test_resolve_transform_still_supports_explicit_specs():
 
     assert isinstance(transform, transforms.Compose)
     assert any(isinstance(t, transforms.Normalize) for t in transform.transforms)
+
+
+def test_load_model_unknown_source_raises():
+    """An unrecognized model-source must fail loudly, not silently."""
+    from utils.load_model import load_model
+
+    with tempfile.TemporaryDirectory() as tmp_path:
+        config_path = _write_config(tmp_path, **{"model-source": "bogus"})
+        with pytest.raises(NotImplementedError):
+            load_model(config_path)
+
+
+def test_resolve_transform_unsupported_spec_raises():
+    """An unknown transform spec name must raise rather than be dropped."""
+    from utils.load_model import resolve_transform
+
+    with tempfile.TemporaryDirectory() as tmp_path:
+        config_path = _write_config(
+            tmp_path,
+            **{
+                "model-source": "torchvision",
+                "transform": [{"name": "NotARealTransform"}],
+            },
+        )
+        with pytest.raises(NotImplementedError, match="NotARealTransform"):
+            resolve_transform(config_path)
+
+
+def test_load_hmax_unsupported_type_raises():
+    """load_hmax_model only knows chresmax_v3; others must raise."""
+    from utils.load_model import load_hmax_model
+
+    with pytest.raises(NotImplementedError):
+        load_hmax_model({"model-type": "unknown_hmax", "model-name": "x"})
+
+
+def test_load_hmax_chresmax_reports_missing_fork():
+    """When the custom timm fork is absent, chresmax_v3 must raise a clear
+    ImportError pointing at the fork -- not an opaque error deeper in the load."""
+    from utils.load_model import load_hmax_model
+
+    try:
+        import timm.models.RESMAX  # noqa: F401
+    except ImportError:
+        with pytest.raises(ImportError, match="fork"):
+            load_hmax_model({"model-type": "chresmax_v3"})
+    else:  # pragma: no cover - only when the fork is actually installed
+        pytest.skip("custom timm fork is installed; missing-fork path not exercised")
