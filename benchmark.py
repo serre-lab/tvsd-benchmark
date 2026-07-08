@@ -5,7 +5,7 @@ import torch
 
 from utils.dataset import TVSD_Dataset
 from utils.load_model import load_model
-from utils.brainscore import compute_brain_score
+from utils.brainscore import compute_brain_score, spearman_brown
 
 
 def main(args):
@@ -42,6 +42,14 @@ def main(args):
         reliability_mask = reliability > args.reliability_threshold
         neural_responses = neural_responses[:, reliability_mask]  # [B, C']
 
+        # Per-neuroid noise ceiling for the retained neuroids (used only when
+        # --ceiling_normalize is set). We reuse the dataset's reliability as the
+        # ceiling estimate; --ceiling_sb_correct applies Spearman-Brown in case
+        # `reliab` holds an uncorrected split-half correlation.
+        ceiling = reliability[reliability_mask].numpy()
+        if args.ceiling_sb_correct:
+            ceiling = spearman_brown(ceiling)
+
         if args.noise_test:
             activations = np.random.normal(
                 size=activations.shape
@@ -57,10 +65,15 @@ def main(args):
             X=activations,
             Y=neural_responses,
             n_splits=args.n_splits,
+            train_size=args.train_size,
+            cv_strategy=args.cv_strategy,
             reducer=args.reducer,
             correlation_fn=args.correlation_fn,
             pca_components=args.pca_components,
-            preprocessed=args.preprocessed,
+            skip_pca=args.skip_pca,
+            standardize=args.standardize,
+            ceiling=ceiling,
+            ceiling_normalize=args.ceiling_normalize,
         )
         layer_scores[layer] = {"score": layer_score, "std": layer_std}
         print(f"Score: {layer_score}, Std: {layer_std}")
@@ -133,25 +146,53 @@ if __name__ == "__main__":
     parser.add_argument(
         "--n_splits",
         type=int,
-        default=5,
-        help="Number of splits for KFold cross-validation.",
+        default=10,
+        help="Number of cross-validation splits (Brain-Score default: 10).",
+    )
+    parser.add_argument(
+        "--train_size",
+        type=float,
+        default=0.9,
+        help="Train fraction per split for ShuffleSplit (Brain-Score default: 0.9).",
+    )
+    parser.add_argument(
+        "--cv_strategy",
+        type=str,
+        default="shuffle",
+        choices=["shuffle", "kfold"],
+        help="Cross-validation strategy. 'shuffle' matches Brain-Score.",
     )
     parser.add_argument(
         "--pca_components",
         type=int,
         default=100,
-        help="Number of PCA components to use.",
+        help="Number of PCA components to reduce features to (fit per train fold).",
+    )
+    parser.add_argument(
+        "--skip_pca",
+        action="store_true",
+        help="Skip in-benchmark PCA (e.g. features were already reduced at generation).",
+    )
+    parser.add_argument(
+        "--standardize",
+        action="store_true",
+        help="Z-score features/targets per fold. Off by default to match Brain-Score.",
+    )
+    parser.add_argument(
+        "--ceiling_normalize",
+        action="store_true",
+        help="Normalize scores by the per-neuroid noise ceiling (Brain-Score-style).",
+    )
+    parser.add_argument(
+        "--ceiling_sb_correct",
+        action="store_true",
+        help="Apply Spearman-Brown to the reliability before using it as the ceiling.",
     )
     parser.add_argument(
         "--skip_interval",
         type=int,
         default=1,
         help="Skip every n-th image in the dataset.",
-    )
-    parser.add_argument(
-        "--preprocessed",
-        action="store_true",
-        help="Whether the data is preprocessed (scaled and PCA applied).",
     )
     parser.add_argument(
         "--noise_test",

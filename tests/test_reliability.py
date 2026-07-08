@@ -213,6 +213,26 @@ class TestReliabilityComputation:
                 # (though not strictly monotonic due to bootstrapping randomness)
                 assert reliabilities[-1] >= reliabilities[0] - 0.1  # Allow some tolerance
 
+    def test_spearman_brown_inflates_positive_reliability(self):
+        """SB correction should raise a moderate positive split-half reliability."""
+        np.random.seed(42)
+        n_reps, n_stim, n_neu = 30, 100, 5
+        base = np.random.randn(n_stim, n_neu)
+        # Moderate noise -> split-half r safely in (0, 1), where 2r/(1+r) > r.
+        data = np.array([base + np.random.randn(n_stim, n_neu) * 0.8 for _ in range(n_reps)])
+
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
+                dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
+                raw = dataset._compute_reliability(data, n_boot=20, random_state=42)
+                corrected = dataset._compute_reliability(
+                    data, n_boot=20, random_state=42, spearman_brown=True
+                )
+
+                assert np.all(raw > 0)
+                assert np.all(corrected > raw)
+                assert np.all(corrected <= 1.0 + 1e-9)
+
 
 class TestReliabilityIntegration:
     """Integration tests for reliability in dataset context."""
