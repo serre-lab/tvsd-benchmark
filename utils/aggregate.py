@@ -33,9 +33,7 @@ def aggregate_results(results_dir: str, monkey: str = "monkeyF"):
                     "std_score": layer_results["Score"].std(),
                 }
             if layer_scores:
-                best_layer_info = max(
-                    layer_scores.values(), key=lambda x: x["mean_score"]
-                )
+                best_layer_info = max(layer_scores.values(), key=lambda x: x["mean_score"])
                 model_best_layers[model] = {
                     "best_layer": best_layer_info["layer"],
                     "best_layer_score": best_layer_info["mean_score"],
@@ -64,7 +62,7 @@ def collect_results(model_dir: str, monkey: str = "monkeyF"):
         - monkey[X]_arr_[Y].csv
         - ...
     """
-    results = {}
+    results: dict[str, list] = {}
     for file in os.listdir(model_dir):
         if file.endswith(".csv") and "agg" not in file:
             monkey_name = file.split("_")[0]

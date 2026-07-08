@@ -1,28 +1,21 @@
 import os
 import argparse
-import json
-from tqdm import tqdm
 import numpy as np
 import torch
-from torch.utils.data import DataLoader
 
 from utils.dataset import TVSD_Dataset
-from utils.hooks import Activations
-from utils.load_model import load_model, resolve_transform
+from utils.load_model import load_model
 from utils.brainscore import compute_brain_score
 
 
 def main(args):
-
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
     model, model_name, _ = load_model(args.model_config)
     # layers = [name for name, module in model.named_modules() if 'relu' not in name]
 
-    tvsd_dataset = TVSD_Dataset(
-        root_dir=args.root_dir, monkey=args.monkey, region=args.region
-    )
+    tvsd_dataset = TVSD_Dataset(root_dir=args.root_dir, monkey=args.monkey, region=args.region)
 
     layer_scores = {}
     activation_dir = f"{args.output_dir}/activations/TVSD/{model_name}"
@@ -32,9 +25,7 @@ def main(args):
         layer_dir = f"{activation_dir}/{layer}"
         activation_path = f"{layer_dir}/activations.pt"
         if not os.path.exists(activation_path):
-            print(
-                f"Activations for layer {layer} not found at {activation_path}. Skipping."
-            )
+            print(f"Activations for layer {layer} not found at {activation_path}. Skipping.")
             continue
         activations = torch.load(f"{layer_dir}/activations.pt", map_location=device)
         if activations is not None:
@@ -45,11 +36,7 @@ def main(args):
 
         # float32: float16 overflows StandardScaler's in-place divide to inf.
         activations = (
-            activations.reshape(activations.shape[0], -1)
-            .detach()
-            .cpu()
-            .float()
-            .numpy()
+            activations.reshape(activations.shape[0], -1).detach().cpu().float().numpy()
         )  # [B, H * W * C]
         neural_responses, reliability = tvsd_dataset[: activations.shape[0]]
         reliability_mask = reliability > args.reliability_threshold
@@ -81,9 +68,7 @@ def main(args):
     print("Final Layer Scores:")
     for layer, scores in layer_scores.items():
         print(f"{layer}: Score = {scores['score']}, Std = {scores['std']}")
-    results_file = (
-        f"{args.output_dir}/results/{model_name}/{args.monkey}_arr_{args.region}.csv"
-    )
+    results_file = f"{args.output_dir}/results/{model_name}/{args.monkey}_arr_{args.region}.csv"
     os.makedirs(os.path.dirname(results_file), exist_ok=True)
     with open(results_file, "w") as f:
         f.write("Layer,Score,Std\n")

@@ -50,9 +50,7 @@ def load_torchvision_model(config: dict):
         model = inception_v3(weights="IMAGENET1K_V1")
         model_name = "inception_v3"
     else:
-        raise NotImplementedError(
-            f"Model {config['model-name']} is not supported in torchvision."
-        )
+        raise NotImplementedError(f"Model {config['model-name']} is not supported in torchvision.")
 
     return model, model_name
 
@@ -99,9 +97,7 @@ def load_hmax_model(config: dict):
         model.load_state_dict(checkpoint["state_dict"], strict=False)
         model_name = "chresmax_v3"
     else:
-        raise NotImplementedError(
-            f"Model {config['model-type']} is not supported in HMAX."
-        )
+        raise NotImplementedError(f"Model {config['model-type']} is not supported in HMAX.")
 
     return model, model_name
 
@@ -133,9 +129,7 @@ def resolve_transform(model_config: str):
         elif spec["name"] == "ToTensor":
             transform_list.append(transforms.ToTensor())
         elif spec["name"] == "Normalize":
-            transform_list.append(
-                transforms.Normalize(mean=spec["mean"], std=spec["std"])
-            )
+            transform_list.append(transforms.Normalize(mean=spec["mean"], std=spec["std"]))
         else:
             raise NotImplementedError(f"Transform {spec['name']} is not supported.")
 
@@ -148,6 +142,9 @@ def resolve_timm_transform(model_name: str):
     (no weight download / instantiation)."""
     from timm.data import create_transform, resolve_data_config
 
-    pretrained_cfg = timm.get_pretrained_cfg(model_name).to_dict()
+    cfg = timm.get_pretrained_cfg(model_name)
+    if cfg is None:
+        raise ValueError(f"Unknown timm model '{model_name}'; no pretrained config found.")
+    pretrained_cfg = cfg.to_dict()
     data_config = resolve_data_config(args={}, pretrained_cfg=pretrained_cfg)
     return create_transform(**data_config, is_training=False)

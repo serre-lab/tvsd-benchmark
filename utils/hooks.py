@@ -14,17 +14,17 @@ class Activations:
         dataset_name: str,
         pca_components: Optional[int] = None,
     ):
-        self.hooks = []
+        self.hooks: List = []
         self._active = True
         self._current_batch = None
         self.model_name = model_name
         self.dataset_name = dataset_name
-        self.activations = {}  # {layer_name: {1: activations, 2: ...}}
+        self.activations: Dict = {}  # {layer_name: {1: activations, 2: ...}}
         self.output_dir = output_dir
         self.ipca_models: Dict[str, IncrementalPCA] = {}
         self._training_mode = False
         self.pca_components = pca_components
-        self._training_activations = {}  # {layer_name: [activations]}
+        self._training_activations: Dict = {}  # {layer_name: [activations]}
 
     def set_batch(self, batch):
         self._current_batch = batch
@@ -56,7 +56,7 @@ class Activations:
     def _handle_inference_mode(self, layer_name: str, output: torch.Tensor):
         output_flat = output.reshape(output.shape[0], -1).detach().cpu()
         if not hasattr(self, "_inference_accum"):
-            self._inference_accum = {}
+            self._inference_accum: Dict = {}
         if layer_name not in self._inference_accum:
             self._inference_accum[layer_name] = []
         self._inference_accum[layer_name].append(output_flat)
@@ -88,9 +88,7 @@ class Activations:
                 concat = np.concatenate([a for a in activations_list], axis=1)
                 print(f"[DEBUG] Concatenated shape: {concat.shape}")
             except Exception as e:
-                print(
-                    f"[ERROR] Failed to concatenate activations for {layer_name}: {e}"
-                )
+                print(f"[ERROR] Failed to concatenate activations for {layer_name}: {e}")
                 continue
             # Adjust n_components if we have fewer features
             n_features = concat.shape[1]
@@ -134,12 +132,10 @@ class Activations:
             if activations:
                 try:
                     tensor = torch.cat(activations, dim=0)
-                except Exception as e:
+                except Exception:
                     print(f"[ERROR] Layer {layer_name} could not be stacked.")
-                    print(
-                        f"[ERROR] Shapes of activations: {[a.shape for a in activations]}"
-                    )
-                    print(f"[ERROR] Skipping saving for this layer.")
+                    print(f"[ERROR] Shapes of activations: {[a.shape for a in activations]}")
+                    print("[ERROR] Skipping saving for this layer.")
                     continue
 
                 file_path = f"{self.output_dir}/activations/{self.dataset_name}/{self.model_name}/{layer_name}/activations.pt"

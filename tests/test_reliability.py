@@ -1,5 +1,5 @@
 """Tests for reliability computation functions."""
-import pytest
+
 import numpy as np
 import torch
 from scipy.stats import pearsonr
@@ -18,8 +18,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 20
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 reliability = dataset._compute_reliability(data, n_boot=20, random_state=42)
 
@@ -33,10 +33,12 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 5
         base_response = np.random.randn(n_stim, n_neu)
         # All repetitions are identical (plus tiny noise)
-        data = np.array([base_response + np.random.randn(n_stim, n_neu) * 0.01 for _ in range(n_reps)])
+        data = np.array(
+            [base_response + np.random.randn(n_stim, n_neu) * 0.01 for _ in range(n_reps)]
+        )
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 reliability = dataset._compute_reliability(data, n_boot=20, random_state=42)
 
@@ -50,8 +52,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 10
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 reliability = dataset._compute_reliability(data, n_boot=30, random_state=42)
 
@@ -65,8 +67,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 10
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
 
                 rel1 = dataset._compute_reliability(data, n_boot=20, random_state=42)
@@ -81,8 +83,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 10
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
 
                 rel1 = dataset._compute_reliability(data, n_boot=20, random_state=42)
@@ -101,8 +103,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 10
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
 
                 # Compute with few bootstraps multiple times
@@ -130,8 +132,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 30, 100, 10
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
 
                 # Compute with all reps
@@ -155,8 +157,8 @@ class TestReliabilityComputation:
         n_reps, n_stim, n_neu = 2, 2, 1
         data = np.random.randn(n_reps, n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                 reliability = dataset._compute_reliability(data, n_boot=5, random_state=42)
 
@@ -175,8 +177,8 @@ class TestReliabilityComputation:
         for n_reps, n_stim, n_neu in test_cases:
             data = np.random.randn(n_reps, n_stim, n_neu)
 
-            with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-                with patch.object(TVSD_TestDataset, '_get_responses'):
+            with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+                with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                     dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
                     reliability = dataset._compute_reliability(data, n_boot=10, random_state=42)
 
@@ -190,17 +192,19 @@ class TestReliabilityComputation:
         # Create data with known reliability structure
         true_response = np.random.randn(n_stim, n_neu)
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=[]):
-            with patch.object(TVSD_TestDataset, '_get_responses'):
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=[]):
+            with patch.object(TVSD_TestDataset, "_get_responses", return_value=(None, None)):
                 dataset = TVSD_TestDataset(monkey="monkeyF", region="V1")
 
                 reliabilities = []
                 for n_reps in [5, 10, 20, 30]:
                     # Create data with noise
-                    data = np.array([
-                        true_response + np.random.randn(n_stim, n_neu) * 0.5
-                        for _ in range(n_reps)
-                    ])
+                    data = np.array(
+                        [
+                            true_response + np.random.randn(n_stim, n_neu) * 0.5
+                            for _ in range(n_reps)
+                        ]
+                    )
 
                     rel = dataset._compute_reliability(data, n_boot=20, random_state=42)
                     reliabilities.append(np.mean(rel))
@@ -222,16 +226,17 @@ class TestReliabilityIntegration:
         test_data = np.random.randn(n_reps, n_stim, n_neu)
         precomputed_rel = np.random.rand(n_neu) * 0.5 + 0.3  # Random reliability in [0.3, 0.8]
 
-        with patch.object(TVSD_TestDataset, '_get_paths', return_value=['img.jpg'] * n_stim):
-            with patch.object(TVSD_TestDataset, '_get_responses') as mock_responses:
+        with patch.object(TVSD_TestDataset, "_get_paths", return_value=["img.jpg"] * n_stim):
+            with patch.object(TVSD_TestDataset, "_get_responses") as mock_responses:
                 # Mock precomputed reliability path
-                mock_responses.return_value = (test_data, torch.tensor(precomputed_rel, dtype=torch.float32))
+                mock_responses.return_value = (
+                    test_data,
+                    torch.tensor(precomputed_rel, dtype=torch.float32),
+                )
 
                 # Create dataset with precomputed reliability
                 dataset_precomputed = TVSD_TestDataset(
-                    monkey="monkeyF",
-                    region="V1",
-                    recompute_reliability=False
+                    monkey="monkeyF", region="V1", recompute_reliability=False
                 )
 
                 # Create dataset with recomputed reliability
@@ -240,7 +245,7 @@ class TestReliabilityIntegration:
                     region="V1",
                     recompute_reliability=True,
                     n_boot=30,
-                    random_state=42
+                    random_state=42,
                 )
 
                 # Extract reliabilities
