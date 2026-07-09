@@ -3,9 +3,15 @@ import argparse
 import numpy as np
 import torch
 
-from utils.dataset import TVSD_Dataset
+from utils.dataset import TVSD_Dataset, TVSD_TestDataset
 from utils.load_model import load_model
-from utils.brainscore import compute_brain_score, spearman_brown
+from utils.brainscore import score_train_test
+
+
+def _load_activations(path, device):
+    """Load saved activations and flatten to (n_stimuli, features)."""
+    a = torch.load(path, map_location=device)
+    return a.reshape(a.shape[0], -1).detach().cpu().float().numpy()
 
 
 def main(args):
@@ -13,60 +19,69 @@ def main(args):
     print(f"Using device: {device}")
 
     model, model_name, _ = load_model(args.model_config)
-    # layers = [name for name, module in model.named_modules() if 'relu' not in name]
 
-    tvsd_dataset = TVSD_Dataset(root_dir=args.root_dir, monkey=args.monkey, region=args.region)
+    # Train responses (single-trial train_MUA) fit the mapping; the held-out test
+    # responses (repetition-averaged test_MUA) are what we score against. Neuron
+    # selection uses the single-trial reliability (`reliab`); the noise ceiling is
+    # the split-half + Spearman-Brown internal consistency of the 30-rep average.
+    train_ds = TVSD_Dataset(root_dir=args.root_dir, monkey=args.monkey, region=args.region)
+    test_ds = TVSD_TestDataset(
+        root_dir=args.root_dir,
+        monkey=args.monkey,
+        region=args.region,
+        recompute_reliability=True,
+        spearman_brown=True,
+        n_boot=args.ceiling_n_boot,
+        random_state=args.random_state,
+    )
+
+    single_trial_reliab = train_ds.reliability.numpy()  # (C,)
+    Y_train_all = np.asarray(train_ds.responses)  # (n_train, C)
+    Y_test_all = np.asarray(test_ds.responses).mean(axis=0)  # (n_test, C) = test_MUA
+    ceiling_all = test_ds.reliability.numpy()  # (C,) SB ceiling
+
+    mask = single_trial_reliab > args.reliability_threshold
+    Y_train_all = Y_train_all[:, mask]
+    Y_test_all = Y_test_all[:, mask]
+    ceiling = ceiling_all[mask]
+    print(
+        f"{int(mask.sum())} neuroids retained with single-trial reliability "
+        f"> {args.reliability_threshold} (median ceiling {np.nanmedian(ceiling):.3f})"
+    )
+
+    train_dir = f"{args.output_dir}/activations/TVSD_train/{model_name}"
+    test_dir = f"{args.output_dir}/activations/TVSD_test/{model_name}"
 
     layer_scores = {}
-    activation_dir = f"{args.output_dir}/activations/TVSD/{model_name}"
-    layers = os.listdir(activation_dir)
-    for layer in layers:
+    for layer in sorted(os.listdir(train_dir)):
         print(f"===== EVALUATING LAYER: {layer} =========")
-        layer_dir = f"{activation_dir}/{layer}"
-        activation_path = f"{layer_dir}/activations.pt"
-        if not os.path.exists(activation_path):
-            print(f"Activations for layer {layer} not found at {activation_path}. Skipping.")
-            continue
-        activations = torch.load(f"{layer_dir}/activations.pt", map_location=device)
-        if activations is not None:
-            print(f"Layer: {layer}, Activations shape: {activations.shape}")
-        else:
-            print(f"No activations found for layer: {layer}")
+        train_path = f"{train_dir}/{layer}/activations.pt"
+        test_path = f"{test_dir}/{layer}/activations.pt"
+        if not (os.path.exists(train_path) and os.path.exists(test_path)):
+            print(f"Missing train/test activations for layer {layer}. Skipping.")
             continue
 
-        # float32: float16 overflows StandardScaler's in-place divide to inf.
-        activations = (
-            activations.reshape(activations.shape[0], -1).detach().cpu().float().numpy()
-        )  # [B, H * W * C]
-        neural_responses, reliability = tvsd_dataset[: activations.shape[0]]
-        reliability_mask = reliability > args.reliability_threshold
-        neural_responses = neural_responses[:, reliability_mask]  # [B, C']
+        X_train = _load_activations(train_path, device)
+        X_test = _load_activations(test_path, device)
 
-        # Per-neuroid noise ceiling for the retained neuroids (used only when
-        # --ceiling_normalize is set). We reuse the dataset's reliability as the
-        # ceiling estimate; --ceiling_sb_correct applies Spearman-Brown in case
-        # `reliab` holds an uncorrected split-half correlation.
-        ceiling = reliability[reliability_mask].numpy()
-        if args.ceiling_sb_correct:
-            ceiling = spearman_brown(ceiling)
+        # Align rows with responses in case generation was truncated (e.g. --max_batches).
+        n_tr = min(X_train.shape[0], Y_train_all.shape[0])
+        n_te = min(X_test.shape[0], Y_test_all.shape[0])
+        X_train, Y_train = X_train[:n_tr], Y_train_all[:n_tr]
+        X_test, Y_test = X_test[:n_te], Y_test_all[:n_te]
+        print(f"train X{X_train.shape} Y{Y_train.shape} | test X{X_test.shape} Y{Y_test.shape}")
 
         if args.noise_test:
-            activations = np.random.normal(
-                size=activations.shape
-            )  # Use random noise for null results
+            X_train = np.random.normal(size=X_train.shape)
+            X_test = np.random.normal(size=X_test.shape)
         if args.permutation_test:
-            np.random.shuffle(neural_responses)
+            np.random.shuffle(Y_test)
 
-        print(
-            f"{neural_responses.shape[1]} neural responses retained with reliability > {args.reliability_threshold}"
-        )
-
-        layer_score, layer_std = compute_brain_score(
-            X=activations,
-            Y=neural_responses,
-            n_splits=args.n_splits,
-            train_size=args.train_size,
-            cv_strategy=args.cv_strategy,
+        layer_score, layer_std = score_train_test(
+            X_train,
+            Y_train,
+            X_test,
+            Y_test,
             reducer=args.reducer,
             correlation_fn=args.correlation_fn,
             pca_components=args.pca_components,
@@ -74,6 +89,8 @@ def main(args):
             standardize=args.standardize,
             ceiling=ceiling,
             ceiling_normalize=args.ceiling_normalize,
+            n_boot_ci=args.n_boot_ci,
+            random_state=args.random_state,
         )
         layer_scores[layer] = {"score": layer_score, "std": layer_std}
         print(f"Score: {layer_score}, Std: {layer_std}")
@@ -121,52 +138,33 @@ if __name__ == "__main__":
         "--output_dir",
         type=str,
         default=f"{os.getcwd()}/outputs",
-        help="Directory to save activations.",
+        help="Directory holding generated activations and results.",
     )
     parser.add_argument(
         "--reliability_threshold",
         type=float,
         default=0.3,
-        help="Reliability threshold for neural responses.",
+        help="Keep neuroids whose single-trial reliability exceeds this (TVSD-paper selection).",
     )
     parser.add_argument(
         "--reducer",
         type=str,
         default="median",
         choices=["mean", "median"],
-        help="Reduction method for brain score.",
+        help="Reduction across neuroids.",
     )
     parser.add_argument(
         "--correlation_fn",
         type=str,
         default="pearson",
         choices=["pearson", "spearman"],
-        help="Correlation function to use for brain score computation.",
-    )
-    parser.add_argument(
-        "--n_splits",
-        type=int,
-        default=10,
-        help="Number of cross-validation splits (Brain-Score default: 10).",
-    )
-    parser.add_argument(
-        "--train_size",
-        type=float,
-        default=0.9,
-        help="Train fraction per split for ShuffleSplit (Brain-Score default: 0.9).",
-    )
-    parser.add_argument(
-        "--cv_strategy",
-        type=str,
-        default="shuffle",
-        choices=["shuffle", "kfold"],
-        help="Cross-validation strategy. 'shuffle' matches Brain-Score.",
+        help="Correlation function for predictivity.",
     )
     parser.add_argument(
         "--pca_components",
         type=int,
         default=100,
-        help="Number of PCA components to reduce features to (fit per train fold).",
+        help="PCA components to reduce features to (fit on train, applied to test).",
     )
     parser.add_argument(
         "--skip_pca",
@@ -176,33 +174,40 @@ if __name__ == "__main__":
     parser.add_argument(
         "--standardize",
         action="store_true",
-        help="Z-score features/targets per fold. Off by default to match Brain-Score.",
+        help="Z-score features/targets (fit on train). Off by default to match Brain-Score.",
     )
     parser.add_argument(
         "--ceiling_normalize",
         action="store_true",
-        help="Normalize scores by the per-neuroid noise ceiling (Brain-Score-style).",
+        help="Normalize scores by the median noise ceiling (Brain-Score-style).",
     )
     parser.add_argument(
-        "--ceiling_sb_correct",
-        action="store_true",
-        help="Apply Spearman-Brown to the reliability before using it as the ceiling.",
-    )
-    parser.add_argument(
-        "--skip_interval",
+        "--ceiling_n_boot",
         type=int,
-        default=1,
-        help="Skip every n-th image in the dataset.",
+        default=30,
+        help="Bootstrap splits for the split-half+SB noise ceiling from test reps.",
+    )
+    parser.add_argument(
+        "--n_boot_ci",
+        type=int,
+        default=100,
+        help="Bootstrap resamples over test stimuli for the score's std.",
+    )
+    parser.add_argument(
+        "--random_state",
+        type=int,
+        default=42,
+        help="Random seed for the ceiling and bootstrap.",
     )
     parser.add_argument(
         "--noise_test",
         action="store_true",
-        help="Run with pure noise to test. Useful for debugging.",
+        help="Replace activations with pure noise (null control).",
     )
     parser.add_argument(
         "--permutation_test",
         action="store_true",
-        help="Randomly permute neural responses. Useful for debugging.",
+        help="Randomly permute test responses (null control).",
     )
 
     args = parser.parse_args()

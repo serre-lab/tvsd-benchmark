@@ -3,7 +3,12 @@
 import numpy as np
 import pytest
 
-from utils.brainscore import compute_brain_score, spearman_brown, _make_splitter
+from utils.brainscore import (
+    compute_brain_score,
+    score_train_test,
+    spearman_brown,
+    _make_splitter,
+)
 
 
 class TestSpearmanBrown:
@@ -76,3 +81,53 @@ class TestComputeBrainScore:
         s1, _ = compute_brain_score(X, Y, random_state=7)
         s2, _ = compute_brain_score(X, Y, random_state=7)
         assert s1 == pytest.approx(s2)
+
+
+class TestScoreTrainTest:
+    def _split_data(self):
+        # Train and test share one linear map -> fit-on-train predicts test well.
+        rng = np.random.default_rng(0)
+        W = rng.standard_normal((20, 5))
+        X_train = rng.standard_normal((500, 20))
+        Y_train = X_train @ W + rng.standard_normal((500, 5)) * 0.05
+        X_test = rng.standard_normal((100, 20))
+        Y_test = X_test @ W + rng.standard_normal((100, 5)) * 0.05
+        return X_train, Y_train, X_test, Y_test
+
+    def test_predicts_heldout_test(self):
+        X_tr, Y_tr, X_te, Y_te = self._split_data()
+        score, std = score_train_test(X_tr, Y_tr, X_te, Y_te)
+        assert score > 0.8
+        assert std >= 0
+
+    def test_ceiling_normalization_scales_score(self):
+        X_tr, Y_tr, X_te, Y_te = self._split_data()
+        raw, _ = score_train_test(X_tr, Y_tr, X_te, Y_te)
+        ceiling = np.full(Y_te.shape[1], 0.5)
+        normed, _ = score_train_test(
+            X_tr, Y_tr, X_te, Y_te, ceiling=ceiling, ceiling_normalize=True
+        )
+        assert normed == pytest.approx(raw / 0.5, rel=1e-6)
+
+    def test_ceiling_normalize_requires_ceiling(self):
+        X_tr, Y_tr, X_te, Y_te = self._split_data()
+        with pytest.raises(ValueError, match="requires a ceiling"):
+            score_train_test(X_tr, Y_tr, X_te, Y_te, ceiling_normalize=True)
+
+    def test_std_reproducible_and_nonzero(self):
+        X_tr, Y_tr, X_te, Y_te = self._split_data()
+        s1, std1 = score_train_test(X_tr, Y_tr, X_te, Y_te, random_state=7)
+        s2, std2 = score_train_test(X_tr, Y_tr, X_te, Y_te, random_state=7)
+        assert s1 == pytest.approx(s2)
+        assert std1 == pytest.approx(std2)  # deterministic bootstrap
+        assert std1 > 0  # bootstrap over test stimuli gives real spread
+
+    def test_noise_features_score_near_zero(self):
+        # Features unrelated to responses -> predictivity near 0 on held-out test.
+        rng = np.random.default_rng(1)
+        X_tr = rng.standard_normal((500, 20))
+        Y_tr = rng.standard_normal((500, 5))
+        X_te = rng.standard_normal((100, 20))
+        Y_te = rng.standard_normal((100, 5))
+        score, _ = score_train_test(X_tr, Y_tr, X_te, Y_te)
+        assert abs(score) < 0.2
