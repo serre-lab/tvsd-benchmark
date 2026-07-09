@@ -158,6 +158,24 @@ class Activations:
     def get_ipca_models(self):
         return self.ipca_models
 
+    def load_ipca_models(self, models_root: str):
+        """Load per-layer IncrementalPCA models previously fit on another split.
+
+        Lets a train-fit IPCA basis be applied to a different split (e.g. test) so
+        the two share one feature space with no train->test leakage in the reduction.
+        """
+        if not os.path.isdir(models_root):
+            raise FileNotFoundError(f"IPCA model dir not found: {models_root}")
+        loaded = 0
+        for layer_name in os.listdir(models_root):
+            pkl = os.path.join(models_root, layer_name, "ipca_model.pkl")
+            if os.path.exists(pkl):
+                with open(pkl, "rb") as f:
+                    self.ipca_models[layer_name] = pickle.load(f)
+                loaded += 1
+        print(f"[IPCA] loaded {loaded} models from {models_root}")
+        return loaded
+
     def save_ipca_models(self):
         if not self.ipca_models:
             return

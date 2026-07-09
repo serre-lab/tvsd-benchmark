@@ -165,6 +165,7 @@ class TVSD_TestDataset(TVSD_BaseDataset):
         n_boot: int = 30,
         n_reps_subset: Optional[int] = None,
         random_state: Optional[int] = None,
+        spearman_brown: bool = False,
     ):
         """
         Args:
@@ -175,11 +176,16 @@ class TVSD_TestDataset(TVSD_BaseDataset):
             n_boot: Number of bootstrap splits for reliability computation (only used if recompute_reliability=True)
             n_reps_subset: If not None, randomly sample this many reps for reliability computation (only used if recompute_reliability=True)
             random_state: Random seed for reliability computation (only used if recompute_reliability=True)
+            spearman_brown: If True, apply the Spearman-Brown correction to the
+                split-half correlations, yielding a full-length reliability estimate
+                (i.e. Brain-Score's InternalConsistency ceiling). Only used if
+                recompute_reliability=True.
         """
         self.recompute_reliability = recompute_reliability
         self.n_boot = n_boot
         self.n_reps_subset = n_reps_subset
         self.random_state = random_state
+        self.spearman_brown = spearman_brown
         super().__init__(root_dir=root_dir, monkey=monkey, region=region, split="test")
 
     def _get_responses(self):
@@ -201,6 +207,7 @@ class TVSD_TestDataset(TVSD_BaseDataset):
                 n_boot=self.n_boot,
                 n_reps_subset=self.n_reps_subset,
                 random_state=self.random_state,
+                spearman_brown=self.spearman_brown,
             )
             reliability = torch.tensor(reliability, dtype=torch.float32)
         else:
@@ -215,6 +222,7 @@ class TVSD_TestDataset(TVSD_BaseDataset):
         n_boot: int = 30,
         n_reps_subset: Optional[int] = None,
         random_state: Optional[int] = None,
+        spearman_brown: bool = False,
     ) -> np.ndarray:
         """
         Compute split-half reliability via bootstrapped correlations.
@@ -224,6 +232,9 @@ class TVSD_TestDataset(TVSD_BaseDataset):
             n_boot: number of bootstrap splits
             n_reps_subset: if not None, randomly sample this many reps instead of using all
             random_state: random seed for reproducibility
+            spearman_brown: if True, apply the Spearman-Brown correction (2r/(1+r))
+                to each split-half correlation before averaging, giving a
+                full-length reliability estimate (noise ceiling)
 
         Returns:
             reliabilities: array of shape (neuroids,) with reliability scores
@@ -251,6 +262,9 @@ class TVSD_TestDataset(TVSD_BaseDataset):
 
                 # correlation across stimuli
                 r, _ = pearsonr(group1, group2)
+                if spearman_brown:
+                    # 2r/(1+r): extrapolate the half-split correlation to full length
+                    r = 2 * r / (1 + r)
                 corrs.append(r)
             reliabilities[neu] = np.mean(corrs)
         return reliabilities

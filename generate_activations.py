@@ -4,7 +4,7 @@ from tqdm import tqdm
 import torch
 from torch.utils.data import DataLoader
 
-from utils.dataset import TVSD_Dataset
+from utils.dataset import TVSD_Dataset, TVSD_TestDataset
 from utils.hooks import Activations
 from utils.load_model import load_model, resolve_transform
 
@@ -19,36 +19,49 @@ def main(args):
     layers = [name for name, module in model.named_modules() if "relu" not in name]
     hook_layers = [layers[i] for i in range(0, len(layers), hook_interval)]
 
+    # Activations are saved per split under TVSD_train / TVSD_test so the benchmark
+    # can fit on train and score on the held-out test images.
+    dataset_name = f"TVSD_{args.split}"
     activations = Activations(
         output_dir=args.output_dir,
         model_name=model_name,
-        dataset_name="TVSD",
+        dataset_name=dataset_name,
         pca_components=args.pca_components,
     )
     activations.register(model, hook_layers)
 
-    tvsd_dataset = TVSD_Dataset(root_dir=args.root_dir, monkey=args.monkey, region=args.region)
+    if args.split == "train":
+        tvsd_dataset = TVSD_Dataset(root_dir=args.root_dir, monkey=args.monkey, region=args.region)
+    else:
+        tvsd_dataset = TVSD_TestDataset(
+            root_dir=args.root_dir, monkey=args.monkey, region=args.region
+        )
     things_dataset = tvsd_dataset.get_things(things_path=args.things_path, transform=transform)
     things_loader = DataLoader(things_dataset, batch_size=args.batch_size, shuffle=False)
-    shuffled_things_loader = DataLoader(things_dataset, batch_size=args.batch_size, shuffle=True)
 
     if args.pca_components is not None:
-        print("Training IPCA models...")
-        activations.set_training_mode(True)
+        if args.split == "train":
+            # Fit the IPCA basis on the train images only.
+            print("Training IPCA models on train split...")
+            activations.set_training_mode(True)
+            shuffled_loader = DataLoader(things_dataset, batch_size=args.batch_size, shuffle=True)
+            for i, batch in tqdm(enumerate(shuffled_loader), desc="Training IPCA"):
+                if args.max_pca_train_batches and i >= int(args.max_pca_train_batches):
+                    break
+                activations.set_batch(i)
+                with torch.no_grad():
+                    _ = model(batch.to(device))
+                activations.finalize_batch_training()
+            torch.cuda.empty_cache()
+            activations.save_ipca_models()
+            activations.set_training_mode(False)
+            print("IPCA training completed.")
+        else:
+            # Apply the train-fit IPCA to the test split (shared basis, no leakage).
+            train_models = f"{args.output_dir}/activations/TVSD_train/{model_name}"
+            activations.load_ipca_models(train_models)
 
-        for i, batch in tqdm(enumerate(shuffled_things_loader), desc="Training IPCA"):
-            if args.max_pca_train_batches and i >= int(args.max_pca_train_batches):
-                break
-            activations.set_batch(i)
-            with torch.no_grad():
-                _ = model(batch.to(device))
-            activations.finalize_batch_training()
-
-        torch.cuda.empty_cache()
-        activations.save_ipca_models()
-        print("IPCA training completed.")
-
-    print("Generating activations...")
+    print(f"Generating {args.split} activations...")
     activations.set_training_mode(False)
 
     for i, batch in tqdm(enumerate(things_loader), desc="Generating activations"):
@@ -91,6 +104,14 @@ if __name__ == "__main__":
         default="V1",
         choices=["V1", "V4", "IT"],
         help="Which brain region to use.",
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="train",
+        choices=["train", "test"],
+        help="Which image split to generate activations for. 'test' reuses the "
+        "train-fit IPCA basis (generate train first).",
     )
     parser.add_argument(
         "--things_path",

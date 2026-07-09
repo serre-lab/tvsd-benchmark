@@ -11,8 +11,18 @@
 
 export PYTHONPATH="$PYTHONPATH:$(pwd)"
 module load cuda cudnn
+
+# Train split first: fits the IPCA basis and saves reduced train activations.
 python -u generate_activations.py   --model_config $1 \
+                                    --split train \
                                     --monkey monkeyF \
                                     --batch_size 128 \
                                     --pca_components 100 \
                                     --max_pca_train_batches 4
+
+# Test split: reuses the train-fit IPCA (no refitting -> leak-free shared basis).
+python -u generate_activations.py   --model_config $1 \
+                                    --split test \
+                                    --monkey monkeyF \
+                                    --batch_size 128 \
+                                    --pca_components 100
